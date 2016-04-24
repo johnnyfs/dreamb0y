@@ -50,9 +50,10 @@ platform.*
 ```
 |Emulator|Platform|Supported|Automatically tested|  
 |--------|--------|---------|--------------------|  
-|fceux   |linux   |yes      |yes                 |  
+|fceux   |linux   |yes      |no                  |  
+|fceux   |windows |yes      |maybe               |  
+|nestopia|linux   |yes      |no                  |  
 |fakenes |        |         |                    |  
-|nestopia|        |         |                    |  
 |ines    |        |         |                    |  
 |rocknes |        |         |                    |  
 |--------|--------|---------|--------------------|  
@@ -60,21 +61,21 @@ platform.*
 
 ## Prerequisites for building
 
-* tup
-* crasm
-* objcopy 
+* tup - build system
+* crasm - 6502 assembler
+* objcopy - for srec conversion/file padding
 
 ## Current goals
 
 Versions of the initial steps of this project exist in multiple locations, the initial goal is to
 port them into a coherently organized project. This will be done in stages.
 
-1. Blank rom
+1. Blank rom - Done!
 
     * basic framework of cmake toolchain in place
     * empty rom compiled into a form that loads on all target emulators
 
-2. Test rom
+2. Test rom - Done!
 
     * load a test tile & palette
     * confirm screen displays correctly on all target emulators
