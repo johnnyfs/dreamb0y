@@ -1,0 +1,3 @@
+: foreach *.s |> crasm %f -o %o > %B.lst |> %B.srec | %B.lst
+: foreach *.srec |> objcopy -I srec -O binary %f %o |> %B.bin
+: header.bin dreamboy.bin |> cat %f > %o |> dreamboy.nes

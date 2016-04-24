@@ -26,13 +26,16 @@ other assets are assembled with custom tools into formats compatible with crasm.
 Custom tools are incorporated into the make chain, written in clang-compatible C
 and are re-run automatically whenever an asset is edited.
 
-The project is assembled with CMake, which will ensure the presence of the 
+The project is assembled with [tup][tup], because it is fast and easy, and because it
+is the best system for extremely generic and frankensteined multi-language build
+paths.
 
   [retro_usb]: http://www.retrousb.com/product_info.php?products_id=34
   [lib6502]: http://piumarta.com/software/lib6502/
   [crasm]: http://crasm.sourceforge.net/crasm.html 
   [ines]: http://wiki.nesdev.com/w/index.php/INES
   [objcopy]: http://linux.die.net/man/1/objcopy
+  [tup]: http://gittup.org/tup/ 
 
 ## <a name="targets">Targeted Emulators</a>
 
@@ -55,6 +58,12 @@ platform.*
 |--------|--------|---------|--------------------|  
 ```
 
+## Prerequisites for building
+
+* tup
+* crasm
+* objcopy 
+
 ## Current goals
 
 Versions of the initial steps of this project exist in multiple locations, the initial goal is to
@@ -64,5 +73,8 @@ port them into a coherently organized project. This will be done in stages.
 
     * basic framework of cmake toolchain in place
     * empty rom compiled into a form that loads on all target emulators
+
+2. Test rom
+
     * load a test tile & palette
     * confirm screen displays correctly on all target emulators
