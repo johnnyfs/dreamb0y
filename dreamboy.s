@@ -4,11 +4,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;
 
 	cpu	6502
+	output	SCODE
 
-;; Zero page
-	dummy
-*=$0000
-vector	ds	2		; generic address pointer
+include lib/zero.s
 
 ;; PRG-ROM bank 1
 *=$C000
@@ -38,9 +36,9 @@ reset	sei
 	lda	#0		; redundant for modularity
 	tay			; y = 0 (byte to clear)
 	ldx	#8		; clear 8 pages
-	sta	vector		; redundant
-.incram	inc	vector + 1	; start at page 1
-.clrram	sta	(vector), y	; clear byte y of page
+	sta	src		; redundant
+.incram	inc	src + 1	; start at page 1
+.clrram	sta	(src), y	; clear byte y of page
 	iny
 	bne	.clrram		; loop until 256 bytes/page
 	dex
@@ -52,13 +50,14 @@ reset	sei
 
 	;; clear the ppu ram
 	lda	#$20		; start at $20xx
+	sta	$2006
 	lsr
 	tay			; y = 16 pages to clear
-	sta	$2006
 	lda	#0
 	sta	$2006		; start at $2000
 	tax			; x = 0 (byte to clear)
-.clrppu	sta	$2007
+	lda	#1
+.clrppu	sta	$2007	
 	inx
 	bne	.clrppu		; loop until 256 bytes/page
 	dey
@@ -76,6 +75,65 @@ reset	sei
 	dey
 	bne	.ldpal
 
+        ;; Load the test map.
+        lda     #(testmap >> 8) & 0xff
+        sta     src + 1
+        lda     #(testmap & 0xff)
+        sta     src
+        jsr     ldmap
+
+	;; Copy the test map to the screen
+	lda	frames
+.wait	cmp	frames
+        bne     .wait
+
+        lda	#$20
+	sta	$2006
+	lda	#$00
+	sta	$2006
+
+        ldy     #0	
+.ld1    lda     $0200, y
+        sta     $2007
+        iny
+        bne     .ld1
+
+	lda	frames
+.wait2	cmp	frames
+        bne     .wait2
+
+        ldy     #0	
+.ld2    lda     $0300, y
+        sta     $2007
+        iny
+        bne     .ld2
+
+	lda	frames
+.wait3	cmp	frames
+        bne     .wait3
+
+        ldy     #0	
+.ld3    lda     $0400, y
+        sta     $2007
+        iny
+        bne     .ld3
+
+	lda	frames
+.wait4	cmp	frames
+        bne     .wait4
+
+        ldy     #0	
+.ld4    lda     $0500, y
+        sta     $2007
+        iny
+        bne     .ld4
+
+	;; reset the scroll
+	lda	#0
+	sta	$2005
+	lda	#248
+	sta	$2005
+	
 	;; Turn the screen back on.
 	lda	#%10100000	; vblank enabled; 8x16 sprites
 	sta	$2000
@@ -85,10 +143,13 @@ reset	sei
 .forevs	jmp	.forevs 
 
 ;; Nmi handler
-nmi	rti
+nmi  	inc	frames
+	rti
 
 ;; Irq handler
 irq	rti
+
+include	lib/ldmap.s
 
 ;; Test palette
 
@@ -101,6 +162,11 @@ palette	db	$1a, $27, $18, $0d
 	db	$1a, $20, $04, $0d	
 	db	$1a, $19, $08, $0d	
 	db	$1a, $19, $08, $0d	
+
+;; Test map
+testmap=*
+include	res/realworld_day_indeces_0_0.tbl.rle.s
+include	res/realworld_day_palettes_0_0.attr.s
 
 ;; Vector table
 *=$fffa

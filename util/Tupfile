@@ -1,0 +1,1 @@
+: foreach *.c |> gcc --std=gnu99 -lm -lSDL -lSDL_image -Wall %f -o %o |> %B

@@ -15,10 +15,9 @@ toys back, and possibly also avoid work forever!
 ## Project Overview
 
 The game is written in 6502 assembly targeting the widest variety of popular
-emulators possible, as well as the NES itself, via [adapted cartridge
-hardware][retro_usb]. As much as possible it incorporates automated testing via
-[run6502][lib6502] and forked versions of the targeted emulators (see [targeted
-emulators](#targets)).
+emulators possible, as well as the NES itself via [adapted cartridge
+hardware][retro_usb]. As much as possible it incorporates automated testing of
+the actual catridge source via [run6502][lib6502].
 
 6502 code is compiled with [crasm][crasm] into motorola SREC files, then
 structured into [INES][ines] format with linux's [objcopy][objcopy]. Images and
@@ -28,7 +27,7 @@ and are re-run automatically whenever an asset is edited.
 
 The project is assembled with [tup][tup], because it is fast and easy, and because it
 is the best system for extremely generic and frankensteined multi-language build
-paths.
+paths. It uses gnu's [make][make] at the top level to maintain separate targets.
 
   [retro_usb]: http://www.retrousb.com/product_info.php?products_id=34
   [lib6502]: http://piumarta.com/software/lib6502/
@@ -36,46 +35,78 @@ paths.
   [ines]: http://wiki.nesdev.com/w/index.php/INES
   [objcopy]: http://linux.die.net/man/1/objcopy
   [tup]: http://gittup.org/tup/ 
+  [make]: https://www.gnu.org/software/make/
 
 ## <a name="targets">Targeted Emulators</a>
 
 Due to the lack of available runtime debugging tools (with the notable exception
 of fceux on windows), the best strategy for maintaining compatibility is
-continuous testing on each platform. Where possible, this testing is automated
-through forked versions of the relevant source.
+continuous testing on each platform.
 
 *Note: most of this table is empty pending investigation of feasibility for each
 platform.*
 
 ```
-|Emulator|Platform|Supported|Automatically tested|  
-|--------|--------|---------|--------------------|  
-|fceux   |linux   |yes      |no                  |  
-|fceux   |windows |yes      |maybe               |  
-|nestopia|linux   |yes      |no                  |  
-|fakenes |        |         |                    |  
-|ines    |        |         |                    |  
-|rocknes |        |         |                    |  
-|--------|--------|---------|--------------------|  
+|Emulator|Platform|Supported|  
+|--------|--------|---------|   
+|fceux   |linux   |yes      |   
+|fceux   |windows |yes      |   
+|nestopia|linux   |yes      |   
+|fakenes |        |         |   
+|ines    |        |         |   
+|rocknes |        |         |   
+|--------|--------|---------|  
 ```
 
 ## Prerequisites for building
 
+* make - build system
 * tup - build system
 * crasm - 6502 assembler
 * objcopy - for srec conversion/file padding
+* gcc - for building the custom utilities
+* run6502 - for automated testing of 6502 assembly
 
-## Current goals
+## Directory structure
 
-Versions of the initial steps of this project exist in multiple locations, the initial goal is to
-port them into a coherently organized project. This will be done in stages.
+* . - top-level 6502 assembly components (header, cart, tilesets)
+* lib - included 6502 assembly modules
+* res - assets (currently maps and color palettes)
+* util - custom utilities (see [build chain][chain])
+* test - automated tests
+    * test/lib - test source and output for run6502 tests
+    * test/util - test inputs and outputs for custom utilities
 
-1. Blank rom - Done!
+## <a name="chain">Build Chain</a>
 
-    * basic framework of cmake toolchain in place
-    * empty rom compiled into a form that loads on all target emulators
+These are the custom utilties:
 
-2. Test rom - Done!
+* uniques: extracts tilesets from an image using a reference palette
+    (*also generates tables of tile and palette indeces!)
+* tblcut: cuts big tables into little tables
+* rowrle: custom compression for the map tables
+* tbl2attr: converts palette tables into NES attribute format
+* img2chr: converts 4-color tilesets into NES chr format
+* bin2asm: converts binary tables into assembly declarations
 
-    * load a test tile & palette
-    * confirm screen displays correctly on all target emulators
+Here's how they're used:
+
+big maps + palettes => uniques => tilesets + tile map + palette map
+
+tilesets => *img2chr* => chr rom binary
+tile map => *tblcut* => screen-sized tile maps
+palettes => *tblcut* => screen-size palette maps
+
+chr rom binary => *bin2asm* => chr rom assembly declartions
+tile maps => *bin2asm* => map assembly declarations
+palette maps => *bin2asm* => attribute assembly declarations
+
+prg-rom source includes map and attribute assembly
+chr-rom source includes chr rom assembly
+
+header + prg-rom source + chr-rom source => *crasm* => cart srec
+cart srec => *objcopy* => cart rom
+
+cart rom => *nintendo* => fun
+
+Later we'll also have tools for sound!
