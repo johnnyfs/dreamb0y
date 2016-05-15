@@ -115,9 +115,16 @@ Later we'll also have tools for sound!
 
 ```
 ☑  map loads  
+```
+
+![map-load-shot](doc/map-load-shot.png)
+
+```
 ☑  status bar  
 ```
-![status-bar-shot]("doc/status-bar-shot.png")
+
+![status-bar-shot](doc/status-bar-shot.png)
+
 ```
 ☐  screen changes with arrows  
 ☐  screen scrolls instead of changing  
