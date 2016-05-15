@@ -116,6 +116,9 @@ Later we'll also have tools for sound!
 ```
 ☑  map loads  
 ☑  status bar  
+
+<a href="doc/status-bar-shot.png"></a>
+
 ☐  screen changes with arrows  
 ☐  screen scrolls instead of changing  
 ☐  animated dreamboy walker   
