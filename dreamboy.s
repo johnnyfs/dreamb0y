@@ -192,6 +192,8 @@ include	res/realworld_day_indeces_0_0.tbl.rle.s
 include	res/realworld_day_palettes_0_0.attr.s
 	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+status_bar=*
+include res/status_bar.tbl.s
 
 ;; Vector table
 *=$fffa

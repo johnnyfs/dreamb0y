@@ -19,3 +19,4 @@ LIB_TEST_DATA = $(wildcard test/lib/test*) $(wildcard test/util/expected*)
 .PHONY: test_lib
 test_lib: all $(LIB_TEST_DATA)
 	crasm test/lib/test_ldmap.s -o test/lib/test_ldmap.srec > test_ldmap.lst && objcopy -I srec -O binary test/lib/test_ldmap.srec test/lib/test_ldmap.bin && run6502 -l 8000 test/lib/test_ldmap.bin -M fff9 -X 0 > test/lib/actual_ldmap.bin && diff test/lib/expected_ldmap.bin test/lib/actual_ldmap.bin
+	crasm test/lib/test_status.s -o test/lib/test_status.srec > test_status.lst && objcopy -I srec -O binary test/lib/test_status.srec test/lib/test_status.bin && run6502 -l 8000 test/lib/test_status.bin -M fff9 -X 0 > test/lib/actual_status.bin && diff test/lib/expected_status.bin test/lib/actual_status.bin

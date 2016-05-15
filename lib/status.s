@@ -1,6 +1,6 @@
 ;;
-;; draw the status bar into the 
-;; load position at $0580 
+;; draw whatever is at the label status_bar to
+;; load position at $0500 
 ;;
 ;; TODO: pre shift these values before saving (util?)
 ;;
@@ -37,7 +37,3 @@ status_load ldx	#0
 	    dec	row
 	    bne	.ldrow
     	    rts
-
-status_bar=*
-include res/status_bar.tbl.s    ;; default bar 
-
