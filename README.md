@@ -117,7 +117,7 @@ Later we'll also have tools for sound!
 ☑  map loads  
 ☑  status bar  
 ```
-<a href="doc/status-bar-shot.png"></a>
+![status-bar-shot]("doc/status-bar-shot.png")
 ```
 ☐  screen changes with arrows  
 ☐  screen scrolls instead of changing  
