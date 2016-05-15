@@ -93,20 +93,63 @@ Here's how they're used:
 
 big maps + palettes => uniques => tilesets + tile map + palette map
 
-tilesets => *img2chr* => chr rom binary
-tile map => *tblcut* => screen-sized tile maps
-palettes => *tblcut* => screen-size palette maps
+`tilesets => *img2chr* => chr rom binary`
+`tile map => *tblcut* => screen-sized tile maps`
+`palettes => *tblcut* => screen-size palette maps`
 
-chr rom binary => *bin2asm* => chr rom assembly declartions
-tile maps => *bin2asm* => map assembly declarations
-palette maps => *bin2asm* => attribute assembly declarations
+`chr rom binary => *bin2asm* => chr rom assembly declartions`
+`tile maps => *bin2asm* => map assembly declarations`
+`palette maps => *bin2asm* => attribute assembly declarations`
 
-prg-rom source includes map and attribute assembly
-chr-rom source includes chr rom assembly
+`prg-rom source includes map and attribute assembly`
+`chr-rom source includes chr rom assembly`
 
-header + prg-rom source + chr-rom source => *crasm* => cart srec
-cart srec => *objcopy* => cart rom
+`header + prg-rom source + chr-rom source => *crasm* => cart srec`
+`cart srec => *objcopy* => cart rom`
 
-cart rom => *nintendo* => fun
+`cart rom => *nintendo* => fun`
 
 Later we'll also have tools for sound!
+
+## Checklist for tech demo
+
+```
+☑  map loads  
+☑  status bar  
+☐  screen changes with arrows  
+☐  screen scrolls instead of changing  
+☐  animated dreamboy walker   
+☐  screen scrolls on edges  
+☐  obstructions  
+☐  music  
+☐  other character sprites  
+☐  interactions  
+☐  doors  
+☐  sound effects (door opening)  
+☐  room interiors  
+☐  music switches for interior  
+☐  day/night cycle (pressing A)  
+☐  day/night cycle controlled by bed interaction  
+☐  animation + tune + music switch for day/night  
+☐  dog sprite sleeping with enterable bubble  
+☐  bubble triggers dream world transition (A returns)  
+☐  return from dream world through portal  
+☐  enterable cave in dw screen 1 (dangerous, no one likes you)  
+☐  possible to reach treasure chest  
+☐  mailbox alive; interaction & it runs away, possible to follow  
+☐  mailbox eats rock, burbs, explodes  
+☐  can reach chest in day world, get sword (music)  
+☐  sword appears in status/ swingable/ sound effect  
+☐  trash talk from people you hit with sword  
+☐  animals challenge you at opening of squirrel forest in dream world  
+☐  possible to enter dream of nut farmer (after you get sword); enter forest  
+☐  real sword in dream world, can fight squirrels!  
+☐  you can take damage and die  
+☐  other creatures, fully fleshed out forest  
+☐  forest dungeon  
+☐  forest dungeon boss  
+☐  destruction of nut farm, possible to get (what?) from treasure chest?  
+☐  possible to enter other dreams, but blocked by construction squirrel  
+☐  clean up graphics, sound
+☐  playable w/o an emulator (either wrapped or in a browser/app?)  
+```

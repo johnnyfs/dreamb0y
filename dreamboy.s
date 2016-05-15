@@ -82,11 +82,10 @@ reset	sei
         sta     src
         jsr     ldmap
 
-	;; Copy the test map to the screen
-	lda	frames
-.wait	cmp	frames
-        bne     .wait
+	;; Load the status bar
+	jsr	status_load
 
+	;; Copy the test map to the screen
         lda	#$20
 	sta	$2006
 	lda	#$00
@@ -98,29 +97,17 @@ reset	sei
         iny
         bne     .ld1
 
-	lda	frames
-.wait2	cmp	frames
-        bne     .wait2
-
         ldy     #0	
 .ld2    lda     $0300, y
         sta     $2007
         iny
         bne     .ld2
 
-	lda	frames
-.wait3	cmp	frames
-        bne     .wait3
-
         ldy     #0	
 .ld3    lda     $0400, y
         sta     $2007
         iny
         bne     .ld3
-
-	lda	frames
-.wait4	cmp	frames
-        bne     .wait4
 
         ldy     #0	
 .ld4    lda     $0500, y
@@ -133,40 +120,78 @@ reset	sei
 	sta	$2005
 	lda	#248
 	sta	$2005
-	
+
 	;; Turn the screen back on.
 	lda	#%10100000	; vblank enabled; 8x16 sprites
 	sta	$2000
 	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
 	sta	$2001
 
-.forevs	jmp	.forevs 
+
+.main	lda	frames
+.wait	cmp	frames
+	bne	.wait
+	bne	.main
+
 
 ;; Nmi handler
+	code
 nmi  	inc	frames
+	ldy	#19
+	ldx	#0
+.spin	dex
+	bne	.spin
+	dey
+	bne	.spin
+	ldx	#136
+.tail	dex
+	bne	.tail
+    
+        ;; yyyVHYYYYYXXXXXxxx
+        ;;   
+        ;; Switch off the screen during retrace
+        stx     $2001
+
+        ;; Turn the screen back on
+	lda     #%10110000	
+	sta	$2000
+	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
+        sta     $2001
+
+	ldy	#3
+	ldx	#0
+.spin2	dex
+	bne	.spin2
+	dey
+	bne	.spin2
+	lda     #%10100000	
+	sta	$2000
 	rti
 
 ;; Irq handler
 irq	rti
 
 include	lib/ldmap.s
+include lib/status.s
 
 ;; Test palette
 
-palette	db	$1a, $27, $18, $0d	
-	db	$1a, $0a, $08, $0d	
-	db	$1a, $32, $22, $0d	
-	db	$1a, $1b, $39, $34
+palette	db	$0d, $1a, $27, $18
+	db	$0d, $1a, $0a, $08
+	db	$0d, $1a, $32, $22
+        db      $0d, $20, $04, $18
 
-	db	$1a, $20, $04, $0d	
-	db	$1a, $20, $04, $0d	
-	db	$1a, $19, $08, $0d	
-	db	$1a, $19, $08, $0d	
+	db	$0d, $1a, $20, $04
+	db	$0d, $1a, $20, $04
+	db	$0d, $1a, $19, $08
+	db	$0d, $1a, $19, $08
 
 ;; Test map
 testmap=*
 include	res/realworld_day_indeces_0_0.tbl.rle.s
 include	res/realworld_day_palettes_0_0.attr.s
+	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 
 ;; Vector table
 *=$fffa

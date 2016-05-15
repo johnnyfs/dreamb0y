@@ -2,7 +2,8 @@ RLE_LENGTH_MASK=    %00000011
 RLE_INDEX_MASK=	    %11111100
 
 ;;
-;; decompresses the map data pointed to by <src> to $0200
+;; decompresses the map data pointed to by <src> to $0200,
+;; with attributes, skipping the status area
 ;;
 	code
 ldmap	lda #$02
@@ -24,6 +25,7 @@ ldmap	lda #$02
 	tya
 	pha			; save the src index
 
+	;; decompress the top half of the row
 .ldrun	lda (src), y
 	and #RLE_LENGTH_MASK
 	tax
@@ -57,6 +59,7 @@ ldmap	lda #$02
 	pla 
 	tay			; restore src index to start of row
 
+	;; decompress the bottom have of the row
 .ldrun2	lda (src), y
 	and #RLE_LENGTH_MASK
 	tax
@@ -94,19 +97,16 @@ ldmap	lda #$02
 	dec count
 	bne .newblk
 
-        lda #0
-        ldy #128
-.status sta $0500, y    
-        iny
-        bne .status
+	;; we skip 128 bytes here for the status bar
 
+	;; decompress the attributes
         ldy srci
         ldx #0
 .attrs  lda (src), y
         sta $05C0, x
         iny
         inx
-        cpx #56
+        cpx #64
         bne .attrs
 
 .done	rts

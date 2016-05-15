@@ -52,6 +52,21 @@ for k, mapfile in pairs(mapfiles) do
         cutfiles)
 end
 
+-- Status bar is a special case
+tup.definerule {
+    inputs = {
+        'status_bar.png',
+        'status_bar_palette.png',
+        grayscale,
+        uniques
+    },
+    command = '../util/uniques status_bar.png -o status_bar_uniques.bmp -p status_bar_palette.png -C 1 -P grayscale.png -t status_bar.tbl',
+    outputs = {
+        'status_bar_uniques.bmp',
+        'status_bar.tbl'
+    }
+}
+
 -- Create rule for converting screen-sized palette index blocks into NES attr format.
 tup.foreach_rule(
     {
@@ -89,3 +104,4 @@ tup.foreach_rule(
     },
     bin2asm .. ' %f -o %o',
     '%f.s')
+

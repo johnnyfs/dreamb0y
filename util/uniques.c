@@ -212,6 +212,7 @@ Uint32
 dereference_from_palettes(Uint32 color, SDL_Surface *palettes, int *palette_index, Uint32 *out_pal) {
     Uint32 *p = palettes->pixels;
     for (int i = 0; i < palettes->w; i ++) {
+        info("checking color 0x%x against palette color 0x%x\n", color, p[i]);
         if (p[i] == color) {
             *palette_index = i / n_colors_per_palette;
             return out_pal[i % n_colors_per_palette];
@@ -286,6 +287,7 @@ main(int argc, char *argv[])
             fail("could not load reference palettes from %s: %s\n", palettes_fn, SDL_GetError());
         }
         palettes = SDL_ConvertSurface(tmp, src_format, 0);
+        info("palettes bpp: %d versus source bpp: %d\n", palettes->format->BytesPerPixel, src_format->BytesPerPixel);
         SDL_FreeSurface(tmp);
         SDL_LockSurface(palettes);
         if (palettes == NULL) {

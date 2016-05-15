@@ -4,7 +4,7 @@
 	asc	"NES"
 	db	$1a 
 	db	1	; number of 16kb prg-rom banks
-	db	1	; number of 8kb prg-rom banks
+	db	1	; number of 8kb chr-rom banks
 	db	1	; MMMM4tsm: mapper# (lower four bits), 4-screen VRAM,
 			; 512kb trainer present, SRAM enabled, vertical mirror
 	db	0	; MMMM000V: upper 4 bits of mapper #; is VS-system

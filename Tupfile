@@ -1,4 +1,4 @@
 : foreach *.s | res/*.s lib/*.s |> crasm %f -o %o > %B.lst |> %B.srec | %B.lst
 : foreach *.srec |> objcopy -I srec -O binary %f %o |> %B.bin
-: tileset.bin |> objcopy -F binary --pad-to 8192 %f %o |> tileset_padded.bin
-: header.bin dreamboy.bin tileset_padded.bin |> cat %f > %o |> dreamboy.nes
+: foreach *_tileset.bin |> objcopy -F binary --pad-to 8192 %f %o |> %B_padded.bin
+: header.bin dreamboy.bin realworld_day_tileset_padded.bin |> cat %f > %o |> dreamboy.nes
