@@ -100,6 +100,7 @@ tup.foreach_rule(
         '*_palettes_*_*.attr',
         '*_indeces_*_*.tbl.rle',
         '*.chr',
+        'status_bar.tbl',
         extra_inputs = bin2asm
     },
     bin2asm .. ' %f -o %o',
