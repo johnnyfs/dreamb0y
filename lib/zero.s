@@ -9,3 +9,7 @@ count	ds	1		; generic counter
 column	ds	1		; generic column counter
 row	ds	1		; generic row counter
 frames  ds      1               ; generic frame counter
+
+;; Joypad interface
+joypad_prev ds	1
+joypad_next ds	1

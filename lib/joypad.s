@@ -1,74 +1,38 @@
 ;;
-;; queries the joystick and calls one of the
-;; specified callbacks if the button is in
-;; the down state; the default value of each
-;; callback is joypad_nothing, which does
-;; what is says
-;; 
-;;  joypad_a
-;;  joypad_b
-;;  joypad_select
-;;  joypad_start
-;;  joypad_up
-;;  joypad_down
-;;  joypad_left
-;;  joypad_right
+;; Queries the joypad and shifts the results into
+;; joypad_next, where each bit corresponds to the
+;; state of the buttons according to the masks below.
+;;
+;; The previous state is copied to joypad_prev. Thus
+;; it is possible to query changes in state by:
+;;
+;; joypad_next & ~joypad_prev = buttons just pressed
+;; joypad_prev & ~joypad_next = buttons just released
 ;;
 
-joypad_strobe	lda #1
+JOYPAD_A=	%10000000
+JOYPAD_B=	%01000000
+JOYPAD_START=	%00100000
+JOYPAD_SELECT=	%00010000
+JOYPAD_UP=	%00001000
+JOYPAD_DOWN=	%00000100
+JOYPAY_RIGHT=	%00000010
+JOYPAY_LEFT=	%00000001
+
+;;
+;; query the joypad; clobbers X
+;;
+		code
+joypad_strobe   lda joypad_next
+		sta joypad_prev
+		ldx #8
+		lda #1
 		sta $4016
 		lda #0
 		sta $4016
-		lda $4016
-		ror A
-		bcc .not_a
-		jsr joypad_call_a
-.not_a		lda $4016
-		ror A
-		bcc .not_b
-		jsr joypad_call_b
-.not_b		lda $4016
-		ror A
-		bcc .not_select
-		jsr joypad_call_select
-.not_select	lda $4016
-		ror A
-		bcc .not_start
-		jsr joypad_call_start
-.not_start	lda $4016
-		ror A
-		bcc .not_up
-		jsr joypad_call_up
-.not_up		lda $4016
-		ror A
-		bcc .not_down
-		jsr joypad_call_down
-.not_down	lda $4016
-		ror A
-		bcc .not_left
-		jsr joypad_call_left
-.not_left	lda $4016
-		ror A
-		bcc .not_right
-		jsr joypad_call_right
-.not_right	rts
-
-joypad_call_a	    jmp (joypad_a)
-joypad_call_b	    jmp (joypad_b)
-joypad_call_select  jmp (joypad_select)
-joypad_call_start   jmp (joypad_start)
-joypad_call_up	    jmp (joypad_up)
-joypad_call_down    jmp (joypad_down)
-joypad_call_left    jmp (joypad_left)
-joypad_call_right   jmp (joypad_right)
-
-joypad_a	dw  joypad_nothing
-joypad_b	dw  joypad_nothing
-joypad_select	dw  joypad_nothing
-joypad_start	dw  joypad_nothing
-joypad_up	dw  joypad_nothing
-joypad_down	dw  joypad_nothing
-joypad_left	dw  joypad_nothing
-joypad_right	dw  joypad_nothing
-
-joypad_nothing	rts
+.next		lda $4016
+		ror             ;; shift bit into carry
+                rol joypad_next ;; shift carry into buttons
+		dex
+		bne .next
+		rts

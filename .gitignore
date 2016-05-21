@@ -1,3 +1,30 @@
+# Ignore tup's cache.
 .tup/**
-.ycm_extra_conf.py
-*tmp*
+
+# Ignore intermediary file types.
+*.attr
+*.attr.s
+*.bin
+*.bin.s
+*.bmp
+*.chr
+*.chr.s
+*.lst
+*.nes
+*.rle
+*.rle.s
+*.srec
+*.swp
+*.tbl
+*.tbl.s
+
+# Exception: handmade bins for testing util output.
+!test/lib/expected_*.bin
+
+# Exception to the exceptions: generated bins
+test/lib/expected_joypad_out.bin
+
+# Ignore the executables/aux files in the util directory.
+util/*
+!util/*.*
+util/.ycm_extra_conf.py

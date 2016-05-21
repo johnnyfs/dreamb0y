@@ -2,6 +2,25 @@
 all: 
 	tup upd
 
+.PHONY: clean
+clean:
+	-rm -f dreamboy.nes
+	-rm -f *.bin
+	-rm -f *.lst
+	-rm -f *.srec
+	-rm -f res/*.attr
+	-rm -f res/*.attr.s
+	-rm -f res/*.bmp
+	-rm -f res/*.chr
+	-rm -f res/*.chr.s
+	-rm -f res/*.rle
+	-rm -f res/*.rle.s
+	-rm -f res/*.tbl
+	-rm -f res/*.tbl.s
+	-rm -f test/util/actual_*
+	-rm -f test/lib/actual_*
+	-rm -f test/lib/expected_joypad_out.bin # special case: generated expected output for joypad test
+
 .PHONY: test
 test: test_utils test_lib
 
@@ -20,4 +39,4 @@ LIB_TEST_DATA = $(wildcard test/lib/test*) $(wildcard test/util/expected*)
 test_lib: all $(LIB_TEST_DATA)
 	crasm test/lib/test_ldmap.s -o test/lib/test_ldmap.srec > test/lib/test_ldmap.lst && objcopy -I srec -O binary test/lib/test_ldmap.srec test/lib/test_ldmap.bin && run6502 -l 8000 test/lib/test_ldmap.bin -M fff9 -X 0 > test/lib/actual_ldmap.bin && diff test/lib/expected_ldmap.bin test/lib/actual_ldmap.bin
 	crasm test/lib/test_status.s -o test/lib/test_status.srec > test/lib/test_status.lst && objcopy -I srec -O binary test/lib/test_status.srec test/lib/test_status.bin && run6502 -l 8000 test/lib/test_status.bin -M fff9 -X 0 > test/lib/actual_status.bin && diff test/lib/expected_status.bin test/lib/actual_status.bin
-	crasm test/lib/test_joypad.s -o test/lib/test_joypad.srec > test/lib/test_joypad.lst && objcopy -I srec -O binary test/lib/test_joypad.srec test/lib/test_joypad.bin && xxd -r -p test/lib/test_joypad.hex | run6502 -l 8000 test/lib/test_joypad.bin -M 4016 -X 0 > test/lib/actual_joypad.bin && diff test/lib/expected_joypad.bin test/lib/actual_joypad.bin
+	crasm test/lib/test_joypad.s -o test/lib/test_joypad.srec > test/lib/test_joypad.lst && objcopy -I srec -O binary test/lib/test_joypad.srec test/lib/test_joypad.bin && xxd -r -p test/lib/expected_joypad_out.hex > test/lib/expected_joypad_out.bin && xxd -r -p test/lib/test_joypad_in.hex | run6502 -l 8000 test/lib/test_joypad.bin -M 4016 -X 0 > test/lib/actual_joypad_out.bin && diff test/lib/expected_joypad_out.bin test/lib/actual_joypad_out.bin
