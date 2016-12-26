@@ -11,7 +11,7 @@ include lib/zero.s
 ;; PRG-ROM bank 1
 *=$C000
 
-;;  Reset handler
+;; Reset handler {{{
 	code
 reset	sei
 	cld			; unused?
@@ -126,54 +126,60 @@ reset	sei
 	sta	$2000
 	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
 	sta	$2001
+;; }}}
 
 
-.main	lda	frames
+;; Main loop {{{
+main	lda	frames
 .wait	cmp	frames
-	bne	.wait
-	bne	.main
+	beq	.wait		;; loop until the frame counter changes
 
-
-;; Nmi handler
-	code
-nmi  	inc	frames
+	;; Loop through retrace and then until we've drawn the screen
+	;; NOTE: reduce this wait in size as we add code
 	ldy	#19
 	ldx	#0
 .spin	dex
 	bne	.spin
 	dey
 	bne	.spin
-	ldx	#136
+	ldx	#128
 .tail	dex
 	bne	.tail
-    
-        ;; yyyVHYYYYYXXXXXxxx
-        ;;   
-        ;; Switch off the screen during retrace
-        stx     $2001
 
-        ;; Turn the screen back on
-	lda     #%10110000	
+	;;  Switch to the other sprite bank mid draw (to display the status bar)
+	lda	#%10110000
 	sta	$2000
-	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
-        sta     $2001
 
-	ldy	#3
-	ldx	#0
-.spin2	dex
-	bne	.spin2
-	dey
-	bne	.spin2
-	lda     #%10100000	
+	;; Loop (main will wait on frame ctr -- ie, until after status is drawn)
+	jmp	main
+;; }}}
+
+
+;; Nmi and Irq handlers {{{
+	code
+nmi	pha
+	lda     #%10100000  ;; switch to map chrs during vblank
 	sta	$2000
-	rti
+	pla
 
-;; Irq handler
-irq	rti
+	;; Increment the frame counter in a reliably timed manner
+	inc	frames	    ;; 5 cycles
+	bne	.not0	    ;; 2 cycles no branch, 3 to branch (TODO: assert no page bndry)
+	inc	frames + 1  ;; 5 cycles
+	rti		    ;; so 12 this path + 6 for rti
+.not0	nop		    ;; 2 cycles
+	nop		    ;; 2 more cycles
+irq	rti		    ;; so 12 this path also + 6 for rti
+;; }}}
 
+
+;; Modules {{{
 include	lib/ldmap.s
 include lib/status.s
+;; }}}
 
+
+;; Test data {{{
 ;; Test palette
 
 palette	db	$0d, $1a, $27, $18
@@ -194,9 +200,12 @@ include	res/realworld_day_palettes_0_0.attr.s
 	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 status_bar=*
 include res/status_bar.tbl.s
+;; }}}
 
-;; Vector table
+
+;; Vector table {{{
 *=$fffa
 	dw	nmi
 	dw	reset 
 	dw	irq
+;;; }}}

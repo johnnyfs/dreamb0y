@@ -8,7 +8,7 @@ dsti	ds	1		; generic dst index
 count	ds	1		; generic counter
 column	ds	1		; generic column counter
 row	ds	1		; generic row counter
-frames  ds      1               ; generic frame counter
+frames  ds      2               ; 16-bit frame counter
 
 ;; Joypad interface
 joypad_prev ds	1
