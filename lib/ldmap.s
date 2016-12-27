@@ -2,15 +2,16 @@ RLE_LENGTH_MASK=    %00000011
 RLE_INDEX_MASK=	    %11111100
 
 ;;
-;; decompresses the map data pointed to by <src> to $0200,
-;; with attributes, skipping the status area
+;; decompresses the map data pointed to by <src> to $0280,
+;; with attributes (starts right after the status bar)
 ;;
 	code
 ldmap	lda #$02
 	sta dst + 1
-	lda #$00
-	sta dst			; dst = $0200
+	lda #$80
+	sta dst			; dst = $0280
 
+        lda #0
 	sta srci
 	sta dsti
 	tay			; srci = dsti = y = 0
@@ -97,13 +98,20 @@ ldmap	lda #$02
 	dec count
 	bne .newblk
 
-	;; we skip 128 bytes here for the status bar
+        ;; write 8 status attribute bits
+        ldx #8
+        ldy #0
+        lda #$ff
+.statr  sta $05C0, y
+        iny
+        dex
+        bne .statr
 
 	;; decompress the attributes
         ldy srci
         ldx #0
 .attrs  lda (src), y
-        sta $05C0, x
+        sta $05C8, x
         iny
         inx
         cpx #64

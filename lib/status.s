@@ -15,16 +15,16 @@ status_load ldx	#0
 .ldcol	    lda status_bar, x
 	    asl
 	    asl
-	    sta $0500, y
+	    sta $0200, y
 	    clc
 	    adc	#1
-	    sta	$0501, y
+	    sta	$0201, y
 	    clc
 	    adc	#1
-	    sta	$0520, y
+	    sta	$0220, y
 	    clc
 	    adc #1
-	    sta	$0521, y
+	    sta	$0221, y
 	    iny
 	    iny
 	    inx

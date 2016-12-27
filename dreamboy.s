@@ -75,15 +75,15 @@ reset	sei
 	dey
 	bne	.ldpal
 
+	;; Load the status bar
+	jsr	status_load
+
         ;; Load the test map.
         lda     #(testmap >> 8) & 0xff
         sta     src + 1
         lda     #(testmap & 0xff)
         sta     src
         jsr     ldmap
-
-	;; Load the status bar
-	jsr	status_load
 
 	;; Copy the test map to the screen
         lda	#$20
@@ -122,7 +122,7 @@ reset	sei
 	sta	$2005
 
 	;; Turn the screen back on.
-	lda	#%10100000	; vblank enabled; 8x16 sprites
+	lda	#%10110000	; vblank enabled; 8x16 sprites
 	sta	$2000
 	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
 	sta	$2001
@@ -134,20 +134,21 @@ main	lda	frames
 .wait	cmp	frames
 	beq	.wait		;; loop until the frame counter changes
 
+
 	;; Loop through retrace and then until we've drawn the screen
 	;; NOTE: reduce this wait in size as we add code
-	ldy	#19
+	ldy	#5
 	ldx	#0
 .spin	dex
 	bne	.spin
 	dey
 	bne	.spin
-	ldx	#128
+	ldx	#88
 .tail	dex
 	bne	.tail
 
-	;;  Switch to the other sprite bank mid draw (to display the status bar)
-	lda	#%10110000
+	;;  Switch to the map chrs mid draw (to display the status bar)
+	lda	#%10100000
 	sta	$2000
 
 	;; Loop (main will wait on frame ctr -- ie, until after status is drawn)
@@ -158,7 +159,7 @@ main	lda	frames
 ;; Nmi and Irq handlers {{{
 	code
 nmi	pha
-	lda     #%10100000  ;; switch to map chrs during vblank
+	lda     #%10110000  ;; switch to status chrs during vblank
 	sta	$2000
 	pla
 
@@ -175,6 +176,7 @@ irq	rti		    ;; so 12 this path also + 6 for rti
 
 ;; Modules {{{
 include	lib/ldmap.s
+include lib/joypad.s
 include lib/status.s
 ;; }}}
 
