@@ -121,6 +121,17 @@ reset	sei
 	lda	#248
 	sta	$2005
 
+	;; write the magic sprite 0
+	ldx	#0
+	stx	$2003
+	lda	#39
+	sta	$2004		; top line of sprite intersects status bar
+	stx	$2004		; use chr 0 (ie, top left of status bar, which must have solid pixel at 1,1)
+	stx	$2004		; attributes don't matter
+	dex			; x = 255
+	dex
+	stx	$2004		; left side of sprite intersects status bar (ie, top left corner)
+
 	;; Turn the screen back on.
 	lda	#%10110000	; vblank enabled; 8x16 sprites
 	sta	$2000
@@ -134,20 +145,17 @@ main	lda	frames
 .wait	cmp	frames
 	beq	.wait		;; loop until the frame counter changes
 
+	;; Wait for the sprite 0 flag to clear
+.waitn0	lda	$2002
+	and	#%01000000
+	bne	.waitn0
 
-	;; Loop through retrace and then until we've drawn the screen
-	;; NOTE: reduce this wait in size as we add code
-	ldy	#5
-	ldx	#0
-.spin	dex
-	bne	.spin
-	dey
-	bne	.spin
-	ldx	#88
-.tail	dex
-	bne	.tail
+	;; Wait on sprite 0
+.wait0	lda	$2002
+	and	#%01000000
+	beq	.wait0
 
-	;;  Switch to the map chrs mid draw (to display the status bar)
+	;;  Switch to the map chrs after status bar is done
 	lda	#%10100000
 	sta	$2000
 
@@ -161,15 +169,12 @@ main	lda	frames
 nmi	pha
 	lda     #%10110000  ;; switch to status chrs during vblank
 	sta	$2000
-	pla
 
-	;; Increment the frame counter in a reliably timed manner
-	inc	frames	    ;; 5 cycles
-	bne	.not0	    ;; 2 cycles no branch, 3 to branch (TODO: assert no page bndry)
-	inc	frames + 1  ;; 5 cycles
-	rti		    ;; so 12 this path + 6 for rti
-.not0	nop		    ;; 2 cycles
-	nop		    ;; 2 more cycles
+	;; Increment the frame counter
+	inc	frames
+	bne	.not0
+	inc	frames + 1
+.not0   pla
 irq	rti		    ;; so 12 this path also + 6 for rti
 ;; }}}
 
