@@ -1,17 +1,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;
-;; DREAMBOY          ;;
+;; dreamboy          ;;
 ;; (c) 2015 johnnygp ;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 
 	cpu	6502
-	output	SCODE
+	output	scode
 
 include lib/zero.s
 
-;; PRG-ROM bank 1
-*=$C000
+;; prg-rom bank 1
+*=$c000
 
-;; Reset handler {{{
+;; reset handler {{{
 	code
 reset	sei
 	cld			; unused?
@@ -75,17 +75,17 @@ reset	sei
 	dey
 	bne	.ldpal
 
-	;; Load the status bar
+	;; load the status bar
 	jsr	status_load
 
-        ;; Load the test map.
+        ;; load the test map.
         lda     #(testmap >> 8) & 0xff
         sta     src + 1
         lda     #(testmap & 0xff)
         sta     src
         jsr     ldmap
 
-	;; Copy the test map to the screen
+	;; copy the test map to the screen
         lda	#$20
 	sta	$2006
 	lda	#$00
@@ -117,33 +117,124 @@ reset	sei
 
 	;; reset the scroll
 	lda	#0
+        sta     xscroll
 	sta	$2005
 	lda	#248
+        sta     yscroll
 	sta	$2005
 
 	;; write the magic sprite 0
 	ldx	#0
 	stx	$2003
-	lda	#39
+	lda	#37
 	sta	$2004		; top line of sprite intersects status bar
 	stx	$2004		; use chr 0 (ie, top left of status bar, which must have solid pixel at 1,1)
-	stx	$2004		; attributes don't matter
-	dex			; x = 255
-	dex
-	stx	$2004		; left side of sprite intersects status bar (ie, top left corner)
+	lda	#%00100000
+	sta	$2004		; attributes don't matter
+	lda	#254
+	sta	$2004		; left side of sprite intersects status bar (ie, top left corner)
 
-	;; Turn the screen back on.
-	lda	#%10110000	; vblank enabled; 8x16 sprites
+	;; initialize the engine
+	lda	#state_free		; engine initial state
+	sta	state
+	lda	#realworld_day & $ff	; engine initial map
+	sta	maps
+	lda	#realworld_day >> 8
+	sta	maps + 1
+        lda     #0
+        sta     pos
+
+	;; turn the screen back on.
+	lda	#%10011000	; vblank enabled; 8x16 sprites
 	sta	$2000
 	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
 	sta	$2001
 ;; }}}
 
+;; fall-through to main here.
 
-;; Main loop {{{
+;; main loop {{{
 main	lda	frames
 .wait	cmp	frames
 	beq	.wait		;; loop until the frame counter changes
+
+
+;;; FREE PLAY STATE ;;;
+
+.n_a=.waitn0
+
+	lda	state
+	cmp	#STATE_FREE
+	bne	.n_free
+
+	;; handle input: for now, switch the screen
+	jsr	joypad_strobe
+	lda	joypad_next
+	eor	joypad_prev	;; 0 ^ 1 || 1 ^ 0 => state changed
+	and	joypad_next	;; & 1 => was pressed
+
+	lsr
+	bcc	.n_rght
+	jsr	mvright
+        jmp     .waitn0
+
+.n_rght	lsr
+	bcc	.n_left
+	jsr	mvleft
+        jmp     .waitn0
+
+.n_left	lsr
+	bcc	.n_down
+
+.n_down	lsr
+	bcc	.n_up
+
+.n_up	lsr
+	bcc	.n_strt
+
+.n_strt	lsr
+	bcc	.n_sel
+
+.n_sel	lsr
+        beq	.n_b
+
+.n_b	lsr
+        beq     .n_a
+        
+        jmp     .waitn0
+
+
+;;; HSTAGE STATE ;;;
+
+.n_free cmp	#STATE_HSTAGE
+	bne	.n_hstg
+
+	;; Stage the entire table for hstaging
+	jsr	stage_next
+	dec	step
+	bne	.waitn0
+
+	;; Prepare to load the map to the current target table
+	ldx	#12
+	stx	step
+	ldx	#STATE_HLOAD
+	stx	state
+	jsr	load_start
+	bne	.waitn0
+
+
+;;; HLOAD STATE ;;;
+
+.n_hstg	cmp	#STATE_HLOAD
+	bne	.waitn0
+
+        dec     step
+        bne     .waitn0
+        ldx     #STATE_FREE
+        stx     state
+
+
+;;; WAIT SPRITE 0 ;;;
 
 	;; Wait for the sprite 0 flag to clear
 .waitn0	lda	$2002
@@ -155,8 +246,12 @@ main	lda	frames
 	and	#%01000000
 	beq	.wait0
 
+    	ldx	#24		;; the sprite hits a row early, so spin a little
+.spin	dex
+	bne	.spin
+
 	;;  Switch to the map chrs after status bar is done
-	lda	#%10100000
+	lda	#%10001000
 	sta	$2000
 
 	;; Loop (main will wait on frame ctr -- ie, until after status is drawn)
@@ -164,24 +259,64 @@ main	lda	frames
 ;; }}}
 
 
+;; mvright/left: state transition for map switching {{{ 
+
+mvright inc     pos		;; right means pos ++
+        ldx     #SCROLL_DELTA	;; right means positive scroll speed
+        bne     mvh             ;; will always branch
+mvleft  dec     pos		;; left means pos --
+        ldx     #-SCROLL_DELTA	;; left means negative scroll speed
+mvh     stx     scroll_speed	;; code common to left/right from here down
+        ldx     #STATE_HSTAGE
+        stx     state
+	ldx	#NAMETBL_MAIN	;; the first load will happen in the swap table
+	stx	nametbl
+        ldx     #12		;; the map is 12 16x16 rows
+        stx     step
+        jmp     stage_start	;; opt out the second return
+
+;;; }}}
+
 ;; Nmi and Irq handlers {{{
 	code
 nmi	pha
-	lda     #%10110000  ;; switch to status chrs during vblank
+        txa
+        pha
+        tya
+        pha
+
+	lda     #%10011000  ;; switch to status chrs during vblank
 	sta	$2000
 
+        lda     state
+        cmp     #STATE_HLOAD
+        bne     .n_hld
+        jsr     load_next
+
+        lda     xscroll
+        sta     $2005
+        lda     yscroll
+        sta     $2005
+
 	;; Increment the frame counter
-	inc	frames
-	bne	.not0
-	inc	frames + 1
-.not0   pla
+.n_hld	inc	frames
+
+	pla
+        tay
+        pla
+        tax
+        pla
 irq	rti		    ;; so 12 this path also + 6 for rti
 ;; }}}
 
 
 ;; Modules {{{
+    ;; test modules
 include	lib/ldmap.s
+    
 include lib/joypad.s
+include lib/load.s
+include lib/stage.s
 include lib/status.s
 ;; }}}
 
@@ -205,6 +340,59 @@ include	res/realworld_day_indeces_0_0.tbl.rle.s
 include	res/realworld_day_palettes_0_0.attr.s
 	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+
+;; Compressed map data (TODO: attributes come first!)
+realworld_day=*
+	dw  realworld_day_0_0
+	dw  realworld_day_1_0
+	dw  realworld_day_2_0
+	dw  realworld_day_3_0
+	dw  realworld_day_0_1
+	dw  realworld_day_1_1
+	dw  realworld_day_2_1
+	dw  realworld_day_3_1
+	dw  realworld_day_0_2
+	dw  realworld_day_1_2
+	dw  realworld_day_2_2
+	dw  realworld_day_3_2
+	dw  realworld_day_0_3
+	dw  realworld_day_1_3
+	dw  realworld_day_2_3
+	dw  realworld_day_3_3
+
+realworld_day_0_0=*
+include	res/realworld_day_indeces_0_0.tbl.rle.s
+realworld_day_1_0=*
+include	res/realworld_day_indeces_1_0.tbl.rle.s
+realworld_day_2_0=*
+include	res/realworld_day_indeces_2_0.tbl.rle.s
+realworld_day_3_0=*
+include	res/realworld_day_indeces_3_0.tbl.rle.s
+realworld_day_0_1=*
+include	res/realworld_day_indeces_0_1.tbl.rle.s
+realworld_day_1_1=*
+include	res/realworld_day_indeces_1_1.tbl.rle.s
+realworld_day_2_1=*
+include	res/realworld_day_indeces_2_1.tbl.rle.s
+realworld_day_3_1=*
+include	res/realworld_day_indeces_3_1.tbl.rle.s
+realworld_day_0_2=*
+include	res/realworld_day_indeces_0_2.tbl.rle.s
+realworld_day_1_2=*
+include	res/realworld_day_indeces_1_2.tbl.rle.s
+realworld_day_2_2=*
+include	res/realworld_day_indeces_2_2.tbl.rle.s
+realworld_day_3_2=*
+include	res/realworld_day_indeces_3_2.tbl.rle.s
+realworld_day_0_3=*
+include	res/realworld_day_indeces_0_3.tbl.rle.s
+realworld_day_1_3=*
+include	res/realworld_day_indeces_1_3.tbl.rle.s
+realworld_day_2_3=*
+include	res/realworld_day_indeces_2_3.tbl.rle.s
+realworld_day_3_3=*
+include	res/realworld_day_indeces_3_3.tbl.rle.s
+
 status_bar=*
 include res/status_bar.tbl.s
 ;; }}}
