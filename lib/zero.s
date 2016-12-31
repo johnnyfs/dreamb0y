@@ -51,14 +51,21 @@ SCROLL_DELTA    = 4             ; default abs scroll speed
 ;;
 ;; Button/bit order 0-7: A B SELECT START UP DOWN LEFT RIGHT
 ;;
+
 joypad_prev	ds	1               ; public: read-only to acquire state before last call to joypad_strobe
 joypad_next	ds	1               ; public: read-only to acquire current state after joypad_strobe
 
 ;; Map staging module
+
 stage_src       ds	2               ; private: pointer to compressed map data to stage
 stage_dst       ds	2               ; private: pointer to current position in staging area
+stage_attr_src  ds      2               ; private: pointer to current position in map attributes
+stage_attr_dst  ds      2               ; private: pointer to current position in attr PPU
 
 ;; Map loading module
+LOAD_BYTES_PER=32
+LOAD_STEPS=768/LOAD_BYTES_PER
+
 load_src	ds	2		; private: pointer to row of map to be loaded
 load_dst        ds	2		; private: PPU address of current load in progress
 

@@ -14,20 +14,68 @@ RLE_INDEX_MASK=	    %11111100
 ;;
 	code
 stage_start     lda pos
-		asl		     ;; addresses are 2 bytes
+		asl			;; addresses are 2 bytes
 		tay
-		lda (maps), y        ;; get the low byte of the map data
-		sta stage_src
+		lda (maps), y		;; get the low byte of the map data
+		sta stage_attr_src
 		iny
-		lda (maps), y        ;; get the high byte
-		sta stage_src + 1
+		lda (maps), y		;; get the high byte
+		sta stage_attr_src + 1
 
-		lda #$02
+		sta stage_src + 1	;; attributes are always 48 bytes
+		lda stage_attr_src
+		clc
+		adc #48
+		sta stage_src
+		bcc .nv
+		inc stage_src + 1
+.nv		sta stage_src
+
+		lda #$02	        ;; we always write to the staging area right after status bar
 		sta stage_dst + 1
 		lda #$80
 		sta stage_dst
 
+		lda nametbl		;; attribute table starts at name table + $03C0 (+$08 for the status bar makes + $03C8)
+		clc
+		adc #$03
+		sta stage_attr_dst + 1
+		lda #$C8
+		sta stage_attr_dst
+
 		rts
+
+;;
+;; Syncs the attributes directly to the PPU, two 16x16 pixels
+;; rows at a time (ie, 4 chr rows). Should only be called 
+;; during retrace.
+;;
+stage_load_attrs    lda	stage_attr_dst + 1 
+		    sta	$2006
+		    lda	stage_attr_dst
+		    sta	$2006
+
+		    ;; Write 8 bytes (each byte is 1 4x4 chr block, arranged clockwise)
+		    ldx #8
+		    ldy #0
+.loop		    lda	(stage_attr_src), y
+		    sta	$2007
+		    iny
+		    dex
+		    bne	.loop
+
+		    ;; Advance the src/dst pointers
+		    tya
+		    clc
+		    adc	stage_attr_src
+		    sta	stage_attr_src
+
+		    tya
+		    clc
+		    adc	stage_attr_dst
+		    sta	stage_attr_dst
+
+		    rts
 
 ;;
 ;; Advances the map staging process one row of 16 16x16 pixel 

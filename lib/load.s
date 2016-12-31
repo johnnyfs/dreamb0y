@@ -27,7 +27,7 @@ load_next	lda load_dst + 1	;; point the ppu at our saved place
 		sta $2006
 
 		ldy #0
-		ldx #64
+		ldx #LOAD_BYTES_PER
 .loop		lda (load_src), y	;; read from current source
 		sta $2007		;; write to ppu
 		iny

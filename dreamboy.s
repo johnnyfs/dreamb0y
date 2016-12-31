@@ -215,7 +215,7 @@ main	lda	frames
 	bne	.waitn0
 
 	;; Prepare to load the map to the current target table
-	ldx	#12
+	ldx	#LOAD_STEPS
 	stx	step
 	ldx	#STATE_HLOAD
 	stx	state
@@ -289,17 +289,28 @@ nmi	pha
 	sta	$2000
 
         lda     state
-        cmp     #STATE_HLOAD
-        bne     .n_hld
-        jsr     load_next
 
-        lda     xscroll
+;;; HLOAD STATE: advance the load one more chunk ;;;
+	
+        cmp	#STATE_HLOAD
+        bne     .done
+        jsr     load_next
+        lda     step
+        lsr
+        beq     .scroll
+        lsr
+        beq     .scroll
+	lsr
+	beq	.scroll		    ;; ie, only when step/2 is odd, or ever fourth step
+        jsr     stage_load_attrs
+
+.scroll	lda     xscroll
         sta     $2005
         lda     yscroll
         sta     $2005
 
 	;; Increment the frame counter
-.n_hld	inc	frames
+.done	inc	frames
 
 	pla
         tay
@@ -327,7 +338,7 @@ include lib/status.s
 palette	db	$0d, $1a, $27, $18
 	db	$0d, $1a, $0a, $08
 	db	$0d, $1a, $32, $22
-        db      $0d, $20, $04, $18
+        db      $0d, $1a, $19, $34
 
 	db	$0d, $1a, $20, $04
 	db	$0d, $1a, $20, $04
@@ -361,36 +372,52 @@ realworld_day=*
 	dw  realworld_day_3_3
 
 realworld_day_0_0=*
+include res/realworld_day_palettes_0_0.attr.s
 include	res/realworld_day_indeces_0_0.tbl.rle.s
 realworld_day_1_0=*
+include res/realworld_day_palettes_1_0.attr.s
 include	res/realworld_day_indeces_1_0.tbl.rle.s
 realworld_day_2_0=*
+include res/realworld_day_palettes_2_0.attr.s
 include	res/realworld_day_indeces_2_0.tbl.rle.s
 realworld_day_3_0=*
+include res/realworld_day_palettes_3_0.attr.s
 include	res/realworld_day_indeces_3_0.tbl.rle.s
 realworld_day_0_1=*
+include res/realworld_day_palettes_0_1.attr.s
 include	res/realworld_day_indeces_0_1.tbl.rle.s
 realworld_day_1_1=*
+include res/realworld_day_palettes_1_1.attr.s
 include	res/realworld_day_indeces_1_1.tbl.rle.s
 realworld_day_2_1=*
+include res/realworld_day_palettes_2_1.attr.s
 include	res/realworld_day_indeces_2_1.tbl.rle.s
 realworld_day_3_1=*
+include res/realworld_day_palettes_3_1.attr.s
 include	res/realworld_day_indeces_3_1.tbl.rle.s
 realworld_day_0_2=*
+include res/realworld_day_palettes_0_2.attr.s
 include	res/realworld_day_indeces_0_2.tbl.rle.s
 realworld_day_1_2=*
+include res/realworld_day_palettes_1_2.attr.s
 include	res/realworld_day_indeces_1_2.tbl.rle.s
 realworld_day_2_2=*
+include res/realworld_day_palettes_2_2.attr.s
 include	res/realworld_day_indeces_2_2.tbl.rle.s
 realworld_day_3_2=*
+include res/realworld_day_palettes_3_2.attr.s
 include	res/realworld_day_indeces_3_2.tbl.rle.s
 realworld_day_0_3=*
+include res/realworld_day_palettes_0_3.attr.s
 include	res/realworld_day_indeces_0_3.tbl.rle.s
 realworld_day_1_3=*
+include res/realworld_day_palettes_1_3.attr.s
 include	res/realworld_day_indeces_1_3.tbl.rle.s
 realworld_day_2_3=*
+include res/realworld_day_palettes_2_3.attr.s
 include	res/realworld_day_indeces_2_3.tbl.rle.s
 realworld_day_3_3=*
+include res/realworld_day_palettes_3_3.attr.s
 include	res/realworld_day_indeces_3_3.tbl.rle.s
 
 status_bar=*
