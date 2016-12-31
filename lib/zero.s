@@ -19,6 +19,7 @@ frames  ds      2               ; 16-bit frame counter
 nametbl ds      1               ; read-only: high byte of dst table for loads ($20=left/main; $24=right/alt)
 maps	ds	2		; read-only: address of current map table
 pos     ds      1               ; read-only: index into current world/level map
+status	ds	1		; read-only: current ppu status bits
 xscroll	ds	1		; read-only: current x scroll (for maintaining scroll after ppu read/write)
 yscroll	ds	1		; read-only: curreny y scroll (same)
 state   ds      1               ; private: major engine state
@@ -56,6 +57,7 @@ joypad_prev	ds	1               ; public: read-only to acquire state before last 
 joypad_next	ds	1               ; public: read-only to acquire current state after joypad_strobe
 
 ;; Map staging module
+STAGE_STEPS=14
 
 stage_src       ds	2               ; private: pointer to compressed map data to stage
 stage_dst       ds	2               ; private: pointer to current position in staging area
@@ -64,7 +66,7 @@ stage_attr_dst  ds      2               ; private: pointer to current position i
 
 ;; Map loading module
 LOAD_BYTES_PER=32
-LOAD_STEPS=768/LOAD_BYTES_PER
+LOAD_STEPS=896/LOAD_BYTES_PER		; 14 rows (counting the status bar) of 32 chrs
 
 load_src	ds	2		; private: pointer to row of map to be loaded
 load_dst        ds	2		; private: PPU address of current load in progress

@@ -98,7 +98,7 @@ ldmap	lda #$02
 	dec count
 	bne .newblk
 
-        ;; write 8 status attribute bits
+        ;; write 8 status attribute bytes
         ldx #8
         ldy #0
         lda #$ff

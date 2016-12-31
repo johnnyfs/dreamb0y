@@ -131,7 +131,7 @@ reset	sei
 	stx	$2004		; use chr 0 (ie, top left of status bar, which must have solid pixel at 1,1)
 	lda	#%00100000
 	sta	$2004		; attributes don't matter
-	lda	#254
+	lda	#253
 	sta	$2004		; left side of sprite intersects status bar (ie, top left corner)
 
 	;; initialize the engine
@@ -145,8 +145,9 @@ reset	sei
         sta     pos
 
 	;; turn the screen back on.
-	lda	#%10011000	; vblank enabled; 8x16 sprites
+	lda	#%10001000	; vblank enabled; 8x16 sprites
 	sta	$2000
+	sta	status		; save for later
 	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
 	sta	$2001
 ;; }}}
@@ -228,11 +229,30 @@ main	lda	frames
 .n_hstg	cmp	#STATE_HLOAD
 	bne	.waitn0
 
-        dec     step
+        dec     step		;; just count -- all the work is done in nmi
         bne     .waitn0
-        ldx     #STATE_FREE
-        stx     state
 
+	;; regardless, we're flipping tables
+	lda	status
+	eor	#%00000001
+	sta	status
+
+	;; if we were in the main table, we're done
+	lsr
+	bcc	.to_fre
+
+	;; if we were in the swap table switch to main and re-stage/load
+	lda	#NAMETBL_MAIN
+	sta	nametbl
+	lda	#STATE_HSTAGE
+	sta	state
+	lda	#STAGE_STEPS
+	sta	step
+	jsr	stage_start
+	bne	.waitn0		;; will always branch
+	
+.to_fre	lda     #STATE_FREE
+        sta     state
 
 ;;; WAIT SPRITE 0 ;;;
 
@@ -251,28 +271,34 @@ main	lda	frames
 	bne	.spin
 
 	;;  Switch to the map chrs after status bar is done
-	lda	#%10001000
+	lda	status
 	sta	$2000
 
+	;; And reset the scroll -- nmi will have messed with it
+	lda	xscroll
+	sta	$2005
+	lda	yscroll
+	sta	$2005
+
 	;; Loop (main will wait on frame ctr -- ie, until after status is drawn)
-	jmp	main
+.noscr	jmp	main
 ;; }}}
 
 
 ;; mvright/left: state transition for map switching {{{ 
 
 mvright inc     pos		;; right means pos ++
-        ldx     #SCROLL_DELTA	;; right means positive scroll speed
+        lda     #SCROLL_DELTA	;; right means positive scroll speed
         bne     mvh             ;; will always branch
 mvleft  dec     pos		;; left means pos --
-        ldx     #-SCROLL_DELTA	;; left means negative scroll speed
-mvh     stx     scroll_speed	;; code common to left/right from here down
-        ldx     #STATE_HSTAGE
-        stx     state
-	ldx	#NAMETBL_MAIN	;; the first load will happen in the swap table
-	stx	nametbl
-        ldx     #12		;; the map is 12 16x16 rows
-        stx     step
+        lda     #-SCROLL_DELTA	;; left means negative scroll speed
+mvh     sta     scroll_speed	;; code common to left/right from here down
+        lda     #STATE_HSTAGE
+        sta     state
+	lda	#NAMETBL_SWAP	;; the first load will happen in the swap table
+	sta	nametbl
+        lda     #14		;; the map is 14 16x16 rows
+        sta     step
         jmp     stage_start	;; opt out the second return
 
 ;;; }}}
@@ -285,27 +311,29 @@ nmi	pha
         tya
         pha
 
-	lda     #%10011000  ;; switch to status chrs during vblank
-	sta	$2000
-
         lda     state
 
 ;;; HLOAD STATE: advance the load one more chunk ;;;
 	
         cmp	#STATE_HLOAD
-        bne     .done
+        bne     .n_hld
         jsr     load_next
         lda     step
         lsr
-        beq     .scroll
-        lsr
-        beq     .scroll
+        beq     .n_hld
 	lsr
-	beq	.scroll		    ;; ie, only when step/2 is odd, or ever fourth step
+	beq	.n_hld		    ;; ie, only when step/2 is odd, or ever fourth step
         jsr     stage_load_attrs
 
-.scroll	lda     xscroll
-        sta     $2005
+	;; The scroll gets effed up when we mess with the ppu, so just always reset it
+.n_hld	ldx	#$00		    ;; scroll bar is scrolled 1 over (so it doesn't move when we max it)
+	lda	status
+	ora	#%00010000
+	sta	$2000
+	lsr 
+	bcc	.nswap
+	dex			    ;; in the swap table we want maximum scroll (so status stays put)
+.nswap	stx     $2005
         lda     yscroll
         sta     $2005
 

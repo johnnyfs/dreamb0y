@@ -1,24 +1,24 @@
 ;;
-;; start a map load from the staging area at $2080 to the
+;; start a map load from the staging area at $2000 to the
 ;; ppu at $2[04]C0, depending on how the target in nametbl
 ;;
 	code
 load_start	ldx #$02
 		stx load_src + 1
-		ldx #$80	    ;; start loading after the status bar
+		ldx #$00	    ;; start loading (including the status bar)
 		stx load_src
 
 		ldx nametbl
 		stx load_dst + 1
-		ldx #$80	    ;; leave space for the status bar
+		ldx #$00	    ;; leave space (including the status bar)
 		stx load_dst
 
 		rts
 
 ;;
 ;; Load the next 64 bytes of the map into the target name table. Client
-;; should call it 12 times after first calling load_start. Calls after
-;; the 12th are undefined.
+;; should call it 14 times after first calling load_start. Calls after
+;; the 14th are undefined.
 ;;
 	code
 load_next	lda load_dst + 1	;; point the ppu at our saved place
