@@ -37,7 +37,8 @@ STATE_VSCROLL   = 7             ; scrolling vertically
 NAMETBL_MAIN    = $20
 NAMETBL_SWAP    = $24
 
-SCROLL_DELTA    = 4             ; default abs scroll speed
+SCROLL_STEPS    = 64
+SCROLL_DELTA    = 256/SCROLL_STEPS
 
 ;;
 ;; Library interfaces.

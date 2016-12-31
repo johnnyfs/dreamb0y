@@ -162,8 +162,6 @@ main	lda	frames
 
 ;;; FREE PLAY STATE ;;;
 
-.n_a=.waitn0
-
 	lda	state
 	cmp	#STATE_FREE
 	bne	.n_free
@@ -202,7 +200,7 @@ main	lda	frames
 .n_b	lsr
         beq     .n_a
         
-        jmp     .waitn0
+.n_a    jmp     .waitn0
 
 
 ;;; HSTAGE STATE ;;;
@@ -213,7 +211,7 @@ main	lda	frames
 	;; Stage the entire table for hstaging
 	jsr	stage_next
 	dec	step
-	bne	.waitn0
+	bne	.n_a	    ;; watch this hack -- branch is too long
 
 	;; Prepare to load the map to the current target table
 	ldx	#LOAD_STEPS
@@ -227,32 +225,88 @@ main	lda	frames
 ;;; HLOAD STATE ;;;
 
 .n_hstg	cmp	#STATE_HLOAD
-	bne	.waitn0
+	bne	.n_hld
 
         dec     step		;; just count -- all the work is done in nmi
         bne     .waitn0
 
-	;; regardless, we're flipping tables
+	lda	scroll_speed	
+	bpl	.do_r
+
 	lda	status
 	eor	#%00000001
 	sta	status
-
-	;; if we were in the main table, we're done
 	lsr
-	bcc	.to_fre
+	bcc	.to_scr		;; we just finished the new map, so it's time to scroll back
 
-	;; if we were in the swap table switch to main and re-stage/load
-	lda	#NAMETBL_MAIN
-	sta	nametbl
+	;; otherwise, stage the new map
+	;; TODO: pull this out into a dostage subroutine
+	dec	pos
 	lda	#STATE_HSTAGE
 	sta	state
 	lda	#STAGE_STEPS
 	sta	step
+	lda	#NAMETBL_MAIN
+	sta	nametbl
+	jsr	stage_start
+	jmp	.waitn0		
+
+	;; if we're scrolling right, we stage the new map, scroll, then stage the new again
+.do_r	lda	status
+	lsr
+	bcc	.to_scr		;; if we're still looking at the main table, time to scroll
+
+	;; otherwise, we're done scrolling, and it's time to switch back
+	asl			;; this will clear the 0 bit :)
+	sta	status
+	lda	#STATE_FREE	;; player can play again!
+	sta	state
+	bne	.waitn0
+
+.to_scr	lda     #STATE_HSCROLL
+	sta     state
+	lda	#SCROLL_STEPS
+	sta	step
+
+	;; fall through and start scrolling right away
+
+
+;;; HSCROLL STATE ;;;
+
+.n_hld	cmp	#STATE_HSCROLL
+	bne	.waitn0
+
+	;; actually scroll
+	lda	scroll_speed
+	clc
+	adc	xscroll
+	sta	xscroll
+
+	;; count down scroll steps
+	dec	step
+	bne	.waitn0
+
+	;; onl flip and stage if we're scrolling right
+	lda	scroll_speed
+	bmi	.do_fre
+
+	lda	status
+	eor	#%00000001
+	sta	status
+
+	;; if we're scrolling right, prepare to stage the map in the main table
+	lda	#STATE_HSTAGE
+	sta	state
+	lda	#STAGE_STEPS
+	sta	step
+	lda	#NAMETBL_MAIN
+	sta	nametbl
 	jsr	stage_start
 	bne	.waitn0		;; will always branch
-	
-.to_fre	lda     #STATE_FREE
-        sta     state
+
+	;; if we're scrolling left, we're done here
+.do_fre	lda	#STATE_FREE
+	sta	state
 
 ;;; WAIT SPRITE 0 ;;;
 
@@ -290,8 +344,7 @@ main	lda	frames
 mvright inc     pos		;; right means pos ++
         lda     #SCROLL_DELTA	;; right means positive scroll speed
         bne     mvh             ;; will always branch
-mvleft  dec     pos		;; left means pos --
-        lda     #-SCROLL_DELTA	;; left means negative scroll speed
+mvleft  lda     #-SCROLL_DELTA	;; left means negative scroll speed (we don't dec pos until later!)
 mvh     sta     scroll_speed	;; code common to left/right from here down
         lda     #STATE_HSTAGE
         sta     state
