@@ -16,7 +16,7 @@ frames  ds      2               ; 16-bit frame counter
 ;; These values should only be written by top-level code (dreamboy.s).
 ;; For the library modules, these are read-only/private as noted
 ;;
-nametbl ds      1               ; read-only: high byte of dst table for loads ($20=left/main; $24=right/alt)
+dsttbl	ds      1               ; read-only: high byte of target table for loads ($20=left/main; $24=right/alt)
 maps	ds	2		; read-only: address of current map table
 pos     ds      1               ; read-only: index into current world/level map
 status	ds	1		; read-only: current ppu status bits
@@ -27,9 +27,17 @@ step    ds      1               ; private: counter for state transitions
 
 STATE_SEQ	= 0             ; limited user control (esc only), sequence is playing
 STATE_FREE     	= 1             ; normal play
-STATE_HSTAGE    = 2             ; staging for horizontal scroll
-STATE_HLOAD     = 3             ; loading for horizontal scroll
-STATE_HSCROLL   = 4             ; scrolling horizontally
+STATE_LSTAGE    = 2             ; stage the current map
+STATE_LLOAD     = 3             ; load the staged old map to the swap table (and switch)
+STATE_LSTAGE2   = 4             ; stage the new map
+STATE_LLOAD2    = 5             ; load the new map to the main table
+STATE_LSCROLL   = 6             ; scroll left from staged old map to new map
+STATE_RSTAGE    = 7             ; stage the new map
+STATE_RLOAD     = 8             ; load the staged map to the swap table
+STATE_RSCROLL   = 9             ; scroll right from current old map to new map
+STATE_RSTAGE2   = 10            ; stage the new map
+STATE_RLOAD2    = 11            ; load the new map to the main table (and switch back)
+
 STATE_VSTAGE    = 5             ; staging for vertical scroll
 STATE_VLOAD     = 6             ; loading for vertical scroll
 STATE_VSCROLL   = 7             ; scrolling vertically

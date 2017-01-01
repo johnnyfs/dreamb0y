@@ -36,7 +36,7 @@ stage_start     lda pos
 		lda #$80
 		sta stage_dst
 
-		lda nametbl		;; attribute table starts at name table + $03C0 (+$08 for the status bar makes + $03C8)
+		lda dsttbl		;; attribute table starts at name table + $03C0 (+$08 for the status bar makes + $03C8)
 		clc
 		adc #$03
 		sta stage_attr_dst + 1

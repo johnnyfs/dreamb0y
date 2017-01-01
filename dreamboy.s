@@ -11,6 +11,10 @@ include lib/zero.s
 ;; prg-rom bank 1
 *=$c000
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INTERRUPT HANDLERS ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; reset handler {{{
 	code
 reset	sei
@@ -152,161 +156,12 @@ reset	sei
 	sta	$2001
 ;; }}}
 
-;; fall-through to main here.
-
 ;; main loop {{{
 main	lda	frames
 .wait	cmp	frames
 	beq	.wait		;; loop until the frame counter changes
 
-
-;;; FREE PLAY STATE ;;;
-
-	lda	state
-	cmp	#STATE_FREE
-	bne	.n_free
-
-	;; handle input: for now, switch the screen
-	jsr	joypad_strobe
-	lda	joypad_next
-	eor	joypad_prev	;; 0 ^ 1 || 1 ^ 0 => state changed
-	and	joypad_next	;; & 1 => was pressed
-
-	lsr
-	bcc	.n_rght
-	jsr	mvright
-        jmp     .waitn0
-
-.n_rght	lsr
-	bcc	.n_left
-	jsr	mvleft
-        jmp     .waitn0
-
-.n_left	lsr
-	bcc	.n_down
-
-.n_down	lsr
-	bcc	.n_up
-
-.n_up	lsr
-	bcc	.n_strt
-
-.n_strt	lsr
-	bcc	.n_sel
-
-.n_sel	lsr
-        beq	.n_b
-
-.n_b	lsr
-        beq     .n_a
-        
-.n_a    jmp     .waitn0
-
-
-;;; HSTAGE STATE ;;;
-
-.n_free cmp	#STATE_HSTAGE
-	bne	.n_hstg
-
-	;; Stage the entire table for hstaging
-	jsr	stage_next
-	dec	step
-	bne	.n_a	    ;; watch this hack -- branch is too long
-
-	;; Prepare to load the map to the current target table
-	ldx	#LOAD_STEPS
-	stx	step
-	ldx	#STATE_HLOAD
-	stx	state
-	jsr	load_start
-	bne	.waitn0
-
-
-;;; HLOAD STATE ;;;
-
-.n_hstg	cmp	#STATE_HLOAD
-	bne	.n_hld
-
-        dec     step		;; just count -- all the work is done in nmi
-        bne     .waitn0
-
-	lda	scroll_speed	
-	bpl	.do_r
-
-	lda	status
-	eor	#%00000001
-	sta	status
-	lsr
-	bcc	.to_scr		;; we just finished the new map, so it's time to scroll back
-
-	;; otherwise, stage the new map
-	;; TODO: pull this out into a dostage subroutine
-	dec	pos
-	lda	#STATE_HSTAGE
-	sta	state
-	lda	#STAGE_STEPS
-	sta	step
-	lda	#NAMETBL_MAIN
-	sta	nametbl
-	jsr	stage_start
-	jmp	.waitn0		
-
-	;; if we're scrolling right, we stage the new map, scroll, then stage the new again
-.do_r	lda	status
-	lsr
-	bcc	.to_scr		;; if we're still looking at the main table, time to scroll
-
-	;; otherwise, we're done scrolling, and it's time to switch back
-	asl			;; this will clear the 0 bit :)
-	sta	status
-	lda	#STATE_FREE	;; player can play again!
-	sta	state
-	bne	.waitn0
-
-.to_scr	lda     #STATE_HSCROLL
-	sta     state
-	lda	#SCROLL_STEPS
-	sta	step
-
-	;; fall through and start scrolling right away
-
-
-;;; HSCROLL STATE ;;;
-
-.n_hld	cmp	#STATE_HSCROLL
-	bne	.waitn0
-
-	;; actually scroll
-	lda	scroll_speed
-	clc
-	adc	xscroll
-	sta	xscroll
-
-	;; count down scroll steps
-	dec	step
-	bne	.waitn0
-
-	;; onl flip and stage if we're scrolling right
-	lda	scroll_speed
-	bmi	.do_fre
-
-	lda	status
-	eor	#%00000001
-	sta	status
-
-	;; if we're scrolling right, prepare to stage the map in the main table
-	lda	#STATE_HSTAGE
-	sta	state
-	lda	#STAGE_STEPS
-	sta	step
-	lda	#NAMETBL_MAIN
-	sta	nametbl
-	jsr	stage_start
-	bne	.waitn0		;; will always branch
-
-	;; if we're scrolling left, we're done here
-.do_fre	lda	#STATE_FREE
-	sta	state
+	jsr	handle_state	;; process the current state
 
 ;;; WAIT SPRITE 0 ;;;
 
@@ -324,7 +179,9 @@ main	lda	frames
 .spin	dex
 	bne	.spin
 
-	;;  Switch to the map chrs after status bar is done
+	;; TODO: incoroprate status loading into the stage/load process so this is less jumpy
+
+	;; Switch to the map chrs after status bar is done
 	lda	status
 	sta	$2000
 
@@ -338,25 +195,7 @@ main	lda	frames
 .noscr	jmp	main
 ;; }}}
 
-
-;; mvright/left: state transition for map switching {{{ 
-
-mvright inc     pos		;; right means pos ++
-        lda     #SCROLL_DELTA	;; right means positive scroll speed
-        bne     mvh             ;; will always branch
-mvleft  lda     #-SCROLL_DELTA	;; left means negative scroll speed (we don't dec pos until later!)
-mvh     sta     scroll_speed	;; code common to left/right from here down
-        lda     #STATE_HSTAGE
-        sta     state
-	lda	#NAMETBL_SWAP	;; the first load will happen in the swap table
-	sta	nametbl
-        lda     #14		;; the map is 14 16x16 rows
-        sta     step
-        jmp     stage_start	;; opt out the second return
-
-;;; }}}
-
-;; Nmi and Irq handlers {{{
+;; Nmi/Irq handlers {{{
 	code
 nmi	pha
         txa
@@ -368,9 +207,17 @@ nmi	pha
 
 ;;; HLOAD STATE: advance the load one more chunk ;;;
 	
-        cmp	#STATE_HLOAD
-        bne     .n_hld
-        jsr     load_next
+	;; this is inefficient but will be less so when we opt out the redundant load
+        cmp	#STATE_LLOAD
+	beq	.hload
+	cmp	#STATE_RLOAD
+	beq	.hload
+	cmp	#STATE_LLOAD2
+	beq	.hload
+	cmp	#STATE_RLOAD2
+	bne	.n_hld	
+
+.hload	jsr     load_next
         lda     step
         lsr
         beq     .n_hld
@@ -401,6 +248,207 @@ nmi	pha
 irq	rti		    ;; so 12 this path also + 6 for rti
 ;; }}}
 
+;;;;;;;;;;;;;;;;;;;;;;
+;;; STATE HANDLING ;;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+;; Handle state by type {{{
+handle_state	lda	state
+		asl
+		tax
+		lda	handlers, x
+		sta	src
+		inx
+		lda	handlers, x
+		sta	src + 1
+		jmp	(src)		;;; this won't work if any of the addresses crosses a page boundary!
+;; }}}
+
+;; Handle STATE_SEQ{{{
+    code
+handle_seq  rts
+;; }}}
+
+;; Handle STATE_FREE {{{
+    code
+handle_free jsr	joypad_strobe
+	    lda	joypad_next
+	    eor	joypad_prev	;; 0 ^ 1 || 1 ^ 0 => state changed
+	    and	joypad_next	;; & 1 => was pressed
+
+	    lsr
+	    bcc	.n_right
+	    jsr	start_rscroll
+	    clv
+	    bvc	.done
+.n_right    lsr
+	    bcc	.n_left
+	    jsr	start_lscroll
+	    clv
+	    bvc .done
+.n_left	    lsr
+	    bcc	.n_down
+.n_down	    lsr
+	    bcc	.n_up
+.n_up	    lsr
+	    bcc	.n_strt
+.n_strt	    lsr
+	    bcc	.n_sel
+.n_sel	    lsr
+	    beq	.n_b
+.n_b	    lsr
+	    beq .done
+.done	    rts
+;;; }}}
+
+;; Handle STATE_LSTAGE (first pass: stage the current map; TODO: opt this out when we can be sure it's already there) {{{
+    code
+handle_lstage	jsr	stage_next	;; advancing the staging process is done in the module
+		dec	step
+		bne	.done
+		inc	state		;; state => LLOAD
+		jmp	enter_load
+.done		rts
+;; }}}
+
+;; Handle STATE_LLOAD (first pass: load the staged current map into the swap table and switch view) {{{
+    code
+handle_lload	dec	step		;; loading is done in nmi, here we just count down
+		bne	.done
+		inc	state		;; state => LSTAGE2
+		dec	pos		;; next phase is to load the new map to the main table
+		jsr	toggle_viewtbl
+		lda	#NAMETBL_MAIN
+		jmp	enter_stage	;; enter_stage sets the nametbl from A
+.done		rts
+;; }}}
+
+;; Handle STATE_LSTAGE2 (second pass: stage the new map) {{{
+    code
+handle_lstage2	jsr	stage_next	;; advancing the staging process is done in the module
+		dec	step
+		bne	.done
+		inc	state		;; state => LLOAD2
+		jmp	enter_load
+.done		rts
+;; }}}
+
+;; Handle STATE_LLOAD2 (second pass: load the staged new map into the main table) {{{
+    code
+handle_lload2	dec	step		;; loading is done in nmi, here we just count down
+		beq	.fallthrough
+		rts
+.fallthrough	inc	state		;; state => LSCROLL
+		jsr	toggle_viewtbl	;; scroll starts fully scrolled & counts down, so POV is end (main) table
+		;; since fully scrolled is scroll=256=0, fall through to prevent the table jumping
+;; }}}
+
+;; Handle STATE_LSCROLL (scroll from the old map in the swap table back to the new map in the main table) {{{
+    code
+handle_lscroll	lda	xscroll
+		sec
+		sbc	#SCROLL_DELTA
+		sta	xscroll	
+		bne	.done		;; scroll left until 0
+		lda	#STATE_FREE
+		sta	state		;; and we're done
+.done		rts
+;; }}}
+
+;; Handle STATE_RSTAGE (first pass: stage the new map) {{{
+    code
+handle_rstage	jsr	stage_next
+		dec	step
+		bne	.done
+		inc	state		;; state => RLOAD
+		jmp	enter_load
+.done		rts
+;; }}}
+
+;; Handle STATE_RLOAD (first pass: load the staged new map into the swap table) {{{
+    code
+handle_rload	dec	step		;; actual loading is done in the nmi	
+		beq	.fallthrough
+		rts
+.fallthrough	inc	state		;; state => RSCROLL
+		;; fallthrough isn't necessary here, but keeps the speed consistent
+;; }}}
+
+;; Handle STATE_RSCROLL (scroll from the current map in the main table to the new map in the swap table) {{{
+    code
+handle_rscroll	lda	#SCROLL_DELTA	
+		clc
+		adc	xscroll
+		sta	xscroll
+		bne	.done
+		jsr	toggle_viewtbl
+		inc	state		;; state => RSTAGE2
+		lda	#NAMETBL_MAIN
+		jmp	enter_stage	;; expects nametbl target in A
+.done		rts
+;; }}}
+
+;; Handle STATE_RSTAGE2 (second pass: stage another copy of the new map; TODO: opt out b/c it's already there!) {{{
+    code
+handle_rstage2	jsr	stage_next
+		dec	step
+		bne	.done
+		inc	state		;; state => RLOAD
+		jmp	enter_load
+.done		rts
+;; }}}
+
+;; Handle STATE_RLOAD2 (second pass: load the new map into the main table and switch the view) {{{
+    code
+handle_rload2	dec	step		;; actual loading is done in the nmi	
+		bne	.done
+		jsr	toggle_viewtbl
+		lda	#STATE_FREE
+		sta	state
+.done		rts
+;; }}}
+
+;;;;;;;;;;;;;;;;;;;;;;
+;;; ENGINE HELPERS ;;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+;; Start l/r scrolling {{{ 
+
+start_rscroll	inc     pos		;; right means pos ++
+		lda	#STATE_RSTAGE
+		bne     .common         ;; will always branch
+start_lscroll	lda	#STATE_LSTAGE	
+.common	        sta	state
+		lda	#NAMETBL_SWAP	;; the first load will happen in the swap table regardless
+		;; fallthrough to enter_stage
+;;; }}}
+
+;; Enter the stage state (arg A == nametbl target) {{{
+enter_stage	sta	dsttbl
+		lda     #STAGE_STEPS
+		sta     step
+		jmp     stage_start	;; opt out the second return
+;;; }}}
+
+;; Enter load state {{{
+    code
+enter_load	lda	#LOAD_STEPS
+		sta	step
+		jsr	load_start
+		rts
+;; }}}
+
+;; Toggle the viewed nametbl {{{
+    code
+toggle_viewtbl	lda	status
+		eor	#%00000001
+		sta	status
+		rts
+;; }}}
+
+;;;;;;;;;;;;;;;;
+;;; INCLUDES ;;;
+;;;;;;;;;;;;;;;;
 
 ;; Modules {{{
     ;; test modules
@@ -412,6 +460,9 @@ include lib/stage.s
 include lib/status.s
 ;; }}}
 
+;;;;;;;;;;;;
+;;; DATA ;;;
+;;;;;;;;;;;;
 
 ;; Test data {{{
 ;; Test palette
@@ -432,8 +483,9 @@ include	res/realworld_day_indeces_0_0.tbl.rle.s
 include	res/realworld_day_palettes_0_0.attr.s
 	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 	db	$ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+;; }}}
 
-;; Compressed map data (TODO: attributes come first!)
+;; Realworld Daytime map {{{
 realworld_day=*
 	dw  realworld_day_0_0
 	dw  realworld_day_1_0
@@ -500,11 +552,33 @@ include	res/realworld_day_indeces_2_3.tbl.rle.s
 realworld_day_3_3=*
 include res/realworld_day_palettes_3_3.attr.s
 include	res/realworld_day_indeces_3_3.tbl.rle.s
+;; }}}
+
+;; Status bar {{{
 
 status_bar=*
 include res/status_bar.tbl.s
 ;; }}}
 
+;;;;;;;;;;;;;;;
+;;; VECTORS ;;;
+;;;;;;;;;;;;;;;
+
+;; State handler jump table {{{
+handlers=*
+    dw	handle_seq
+    dw	handle_free
+    dw	handle_lstage
+    dw	handle_lload
+    dw	handle_lstage2
+    dw	handle_lload2
+    dw	handle_lscroll
+    dw	handle_rstage
+    dw	handle_rload
+    dw	handle_rscroll
+    dw	handle_rstage2
+    dw	handle_rload2
+;; }}}
 
 ;; Vector table {{{
 *=$fffa

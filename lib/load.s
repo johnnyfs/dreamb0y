@@ -1,6 +1,6 @@
 ;;
 ;; start a map load from the staging area at $2000 to the
-;; ppu at $2[04]C0, depending on how the target in nametbl
+;; ppu at $2[04]C0, depending on how the target in dsttbl
 ;;
 	code
 load_start	ldx #$02
@@ -8,7 +8,7 @@ load_start	ldx #$02
 		ldx #$00	    ;; start loading (including the status bar)
 		stx load_src
 
-		ldx nametbl
+		ldx dsttbl
 		stx load_dst + 1
 		ldx #$00	    ;; leave space (including the status bar)
 		stx load_dst
