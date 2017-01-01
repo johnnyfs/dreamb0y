@@ -68,15 +68,16 @@ STAGE_STEPS=14
 
 stage_src       ds	2               ; private: pointer to compressed map data to stage
 stage_dst       ds	2               ; private: pointer to current position in staging area
-stage_attr_src  ds      2               ; private: pointer to current position in map attributes
-stage_attr_dst  ds      2               ; private: pointer to current position in attr PPU
 
 ;; Map loading module
 LOAD_BYTES_PER=64
-LOAD_STEPS=896/LOAD_BYTES_PER		; 14 rows (counting the status bar) of 32 chrs
+LOAD_STEPS=18                           ; 12 rows (we don't load the status bar) of 32 chrs each + 6 rows of attr blocks
 
-load_src	ds	2		; private: pointer to row of map to be loaded
-load_dst        ds	2		; private: PPU address of current load in progress
+load_chr_src	ds	2		; private: pointer to row of map to be loaded
+load_chr_dst    ds	2		; private: PPU address of current load in progress
+load_attr_src	ds	2		; private: pointer to attr to load
+load_attr_dst	ds	2		; private: pointer to attr write address in PPU
+load_step	ds	1		; private: internal state counter
 
 ;; Map scrolling module
 scroll_speed	ds	1               ; public: read/write to control scroll speed/direction

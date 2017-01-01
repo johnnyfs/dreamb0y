@@ -207,7 +207,7 @@ nmi	pha
 
 ;;; HLOAD STATE: advance the load one more chunk ;;;
 	
-	;; this is inefficient but will be less so when we opt out the redundant load
+	;; TODO: make this less inefficient? set an engine flag for loading?
         cmp	#STATE_LLOAD
 	beq	.hload
 	cmp	#STATE_RLOAD
@@ -218,14 +218,8 @@ nmi	pha
 	bne	.n_hld	
 
 .hload	jsr     load_next
-        lda     step
-        lsr
-        beq     .n_hld
-	lsr
-	beq	.n_hld		    ;; ie, only when step/2 is odd, or ever fourth step
-        jsr     stage_load_attrs
 
-	;; The scroll gets effed up when we mess with the ppu, so just always reset it
+	;; Set scroll and table for status bar
 .n_hld	lda	status
 	ora	#%00010000	    ;; bank switch for the status bar
 	and	#%11111110	    ;; always use the main table
@@ -372,7 +366,7 @@ handle_rscroll	lda	#SCROLL_DELTA
 		jsr	toggle_viewtbl
 		inc	state		;; state => RLOAD2
 		lda	#NAMETBL_MAIN
-		jsr	setup_stage	;; (necessary for attrs; TODO: fix this)
+                sta     dsttbl
 		jmp	setup_load
 .done		rts
 ;; }}}
@@ -413,7 +407,6 @@ start_lscroll	lda	#STATE_LLOAD
 		sta	state
 		lda	#NAMETBL_SWAP
 		sta	dsttbl
-		jsr	stage_start	;; necessary to set up attrs (TODO: fix this)
 		;; fallthrough to setup_load
 ;; }}}
 
