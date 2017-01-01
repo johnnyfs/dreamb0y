@@ -226,14 +226,11 @@ nmi	pha
         jsr     stage_load_attrs
 
 	;; The scroll gets effed up when we mess with the ppu, so just always reset it
-.n_hld	ldx	#$00		    ;; scroll bar is scrolled 1 over (so it doesn't move when we max it)
-	lda	status
+.n_hld	lda	status
 	ora	#%00010000
-	sta	$2000
-	lsr 
-	bcc	.nswap
-	dex			    ;; in the swap table we want maximum scroll (so status stays put)
-.nswap	stx     $2005
+	sta	$2000		    ;; bank switch for the status bar
+	lda	#0
+	sta     $2005		    ;; x scroll is always 0 for the status bar
         lda     yscroll
         sta     $2005
 
@@ -301,35 +298,25 @@ handle_free jsr	joypad_strobe
 .done	    rts
 ;;; }}}
 
-;; Handle STATE_LSTAGE (first pass: stage the current map; TODO: opt this out when we can be sure it's already there) {{{
-    code
-handle_lstage	jsr	stage_next	;; advancing the staging process is done in the module
-		dec	step
-		bne	.done
-		inc	state		;; state => LLOAD
-		jmp	enter_load
-.done		rts
-;; }}}
-
 ;; Handle STATE_LLOAD (first pass: load the staged current map into the swap table and switch view) {{{
     code
 handle_lload	dec	step		;; loading is done in nmi, here we just count down
 		bne	.done
-		inc	state		;; state => LSTAGE2
+		inc	state		;; state => LSTAGE
 		dec	pos		;; next phase is to load the new map to the main table
 		jsr	toggle_viewtbl
 		lda	#NAMETBL_MAIN
-		jmp	enter_stage	;; enter_stage sets the nametbl from A
+		jmp	setup_stage	;; setup_stage sets the nametbl from A
 .done		rts
 ;; }}}
 
-;; Handle STATE_LSTAGE2 (second pass: stage the new map) {{{
+;; Handle STATE_LSTAGE (second pass: stage the new map) {{{
     code
-handle_lstage2	jsr	stage_next	;; advancing the staging process is done in the module
+handle_lstage	jsr	stage_next	;; advancing the staging process is done in the module
 		dec	step
 		bne	.done
 		inc	state		;; state => LLOAD2
-		jmp	enter_load
+		jmp	setup_load
 .done		rts
 ;; }}}
 
@@ -361,7 +348,7 @@ handle_rstage	jsr	stage_next
 		dec	step
 		bne	.done
 		inc	state		;; state => RLOAD
-		jmp	enter_load
+		jmp	setup_load
 .done		rts
 ;; }}}
 
@@ -382,19 +369,10 @@ handle_rscroll	lda	#SCROLL_DELTA
 		sta	xscroll
 		bne	.done
 		jsr	toggle_viewtbl
-		inc	state		;; state => RSTAGE2
+		inc	state		;; state => RLOAD2
 		lda	#NAMETBL_MAIN
-		jmp	enter_stage	;; expects nametbl target in A
-.done		rts
-;; }}}
-
-;; Handle STATE_RSTAGE2 (second pass: stage another copy of the new map; TODO: opt out b/c it's already there!) {{{
-    code
-handle_rstage2	jsr	stage_next
-		dec	step
-		bne	.done
-		inc	state		;; state => RLOAD
-		jmp	enter_load
+		jsr	setup_stage	;; (necessary for attrs; TODO: fix this)
+		jmp	setup_load
 .done		rts
 ;; }}}
 
@@ -412,27 +390,35 @@ handle_rload2	dec	step		;; actual loading is done in the nmi
 ;;; ENGINE HELPERS ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
 
-;; Start l/r scrolling {{{ 
+;; Start right scrolling {{{ 
+
 
 start_rscroll	inc     pos		;; right means pos ++
 		lda	#STATE_RSTAGE
-		bne     .common         ;; will always branch
-start_lscroll	lda	#STATE_LSTAGE	
-.common	        sta	state
+		sta	state
 		lda	#NAMETBL_SWAP	;; the first load will happen in the swap table regardless
-		;; fallthrough to enter_stage
+		;; fallthrough to setup_stage
 ;;; }}}
 
-;; Enter the stage state (arg A == nametbl target) {{{
-enter_stage	sta	dsttbl
+;; Common setup for the stage state (arg A == nametbl target) {{{
+setup_stage	sta	dsttbl
 		lda     #STAGE_STEPS
 		sta     step
 		jmp     stage_start	;; opt out the second return
 ;;; }}}
 
-;; Enter load state {{{
+;; Start left scrolling {{{
+start_lscroll	lda	#STATE_LLOAD
+		sta	state
+		lda	#NAMETBL_SWAP
+		sta	dsttbl
+		jsr	stage_start	;; necessary to set up attrs (TODO: fix this)
+		;; fallthrough to setup_load
+;; }}}
+
+;; Common setup for the load state {{{
     code
-enter_load	lda	#LOAD_STEPS
+setup_load	lda	#LOAD_STEPS
 		sta	step
 		jsr	load_start
 		rts
@@ -568,15 +554,13 @@ include res/status_bar.tbl.s
 handlers=*
     dw	handle_seq
     dw	handle_free
-    dw	handle_lstage
     dw	handle_lload
-    dw	handle_lstage2
+    dw	handle_lstage
     dw	handle_lload2
     dw	handle_lscroll
     dw	handle_rstage
     dw	handle_rload
     dw	handle_rscroll
-    dw	handle_rstage2
     dw	handle_rload2
 ;; }}}
 
