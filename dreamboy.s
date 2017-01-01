@@ -227,8 +227,9 @@ nmi	pha
 
 	;; The scroll gets effed up when we mess with the ppu, so just always reset it
 .n_hld	lda	status
-	ora	#%00010000
-	sta	$2000		    ;; bank switch for the status bar
+	ora	#%00010000	    ;; bank switch for the status bar
+	and	#%11111110	    ;; always use the main table
+	sta	$2000	
 	lda	#0
 	sta     $2005		    ;; x scroll is always 0 for the status bar
         lda     yscroll
