@@ -123,7 +123,7 @@ reset	sei
 	lda	#0
         sta     xscroll
 	sta	$2005
-	lda	#248
+	lda	#SCROLL_INITY	; forget why -- we have to start at 248?
         sta     yscroll
 	sta	$2005
 
@@ -175,21 +175,35 @@ main	lda	frames
 	and	#%01000000
 	beq	.wait0
 
-    	ldx	#24		;; the sprite hits a row early, so spin a little
+    	ldx	#32
 .spin	dex
 	bne	.spin
 
 	;; TODO: incoroprate status loading into the stage/load process so this is less jumpy
 
+	;; And reset the scroll -- nmi will have messed with it
+	and	#%00000001
+	asl
+	asl		    ; we'll now be 4 for swap table, 0 for main
+	sta	$2006
+	lda	yscroll
+	sta	$2005
+	ldx	xscroll
+	stx	$2005
+	and	#$F8
+	asl
+	asl
+	sta	tmp
+	txa
+	lsr
+	lsr
+	lsr
+	ora	tmp
+	sta	$2006
+
 	;; Switch to the map chrs after status bar is done
 	lda	status
 	sta	$2000
-
-	;; And reset the scroll -- nmi will have messed with it
-	lda	xscroll
-	sta	$2005
-	lda	yscroll
-	sta	$2005
 
 	;; Loop (main will wait on frame ctr -- ie, until after status is drawn)
 .noscr	jmp	main
@@ -205,19 +219,25 @@ nmi	pha
 
         lda     state
 
-;;; HLOAD STATE: advance the load one more chunk ;;;
+;;; LOAD STATE: advance the load one more chunk ;;;
 	
 	;; TODO: make this less inefficient? set an engine flag for loading?
         cmp	#STATE_LLOAD
-	beq	.hload
+	beq	.load
 	cmp	#STATE_RLOAD
-	beq	.hload
+	beq	.load
 	cmp	#STATE_LLOAD2
-	beq	.hload
+	beq	.load
 	cmp	#STATE_RLOAD2
+	beq	.load
+	cmp	#STATE_VLOAD
+	beq	.load
+	cmp	#STATE_VLOAD2
+	beq	.load
+	cmp	#STATE_VLOAD3
 	bne	.n_hld	
 
-.hload	jsr     load_next
+.load	jsr     load_next
 
 	;; Set scroll and table for status bar
 .n_hld	lda	status
@@ -226,8 +246,8 @@ nmi	pha
 	sta	$2000	
 	lda	#0
 	sta     $2005		    ;; x scroll is always 0 for the status bar
-        lda     yscroll
-        sta     $2005
+	lda	#SCROLL_NMIY
+        sta     $2005		    ;; scroll is always init state for status bar
 
 	;; Increment the frame counter
 .done	inc	frames
@@ -280,8 +300,14 @@ handle_free jsr	joypad_strobe
 	    bvc .done
 .n_left	    lsr
 	    bcc	.n_down
+	    jsr	start_dscroll
+	    clv
+	    bvc	.done
 .n_down	    lsr
 	    bcc	.n_up
+	    jsr	start_uscroll
+	    clv
+	    bvc	.done
 .n_up	    lsr
 	    bcc	.n_strt
 .n_strt	    lsr
@@ -381,6 +407,83 @@ handle_rload2	dec	step		;; actual loading is done in the nmi
 .done		rts
 ;; }}}
 
+;; Handle STATE_VLOAD (first load: old map into swap table in normal pos) {{{
+    code
+handle_vload	dec	step		;; loading happens in NMI
+		beq	.load_done
+		rts
+.load_done	inc	state		;; state => VSTAGE (stage new map; pos already changed)	
+		lda	scroll_speed
+		clc
+		adc	pos		;; BRITTLE: we need to use a pos/neg pitch value here...
+		sta	pos
+		jsr	toggle_viewtbl	;; switch to look at the old map we just loaded
+		lda	dsttbl		;; annoying -- we're not switching tables (this is dumb)
+		jmp	setup_stage
+;; }}}
+
+;; Handle STATE_VSTAGE (stage the new map) {{{
+    code
+handle_vstage	jsr	stage_next	    
+		dec	step
+		beq	.stage_done
+		rts
+.stage_done	inc	state		;; state => VLOAD2 (load the new map into the top/bottom pos)
+		lda	scroll_speed
+		bmi	.uload
+		lda	#LOAD_TYPE_AFTER ;; for down scroll, we load the map forward after the map we just loaded
+		bne	.common
+.uload		lda	#LOAD_TYPE_BEFORE ;; for up scroll, we load the map backward before the map we just loaded
+.common		sta	load_type		
+		lda	#3
+		sta	step		;; load 3 steps (1 row) at a time
+		lda	#6
+		sta	step2		;; do this (alternating with scrolling) 6 times
+		jmp	load_start	;; skip setup_load here b/c it will set the step counter differently
+;; }}}
+
+;; Handle STATE_VLOAD2 (load a row, then scroll) {{{
+    code
+handle_vload2	dec	step
+		bne	.done
+		inc	state		;; state => vscroll (scroll in the rows we just loaded)
+		lda	#8
+		sta	step		;; scroll 4 * 4 = 16 pix
+.done		rts
+;;; }}}
+
+;;; Handle STATE_VSCROLL (scroll in the row just loaded) {{{
+    code
+handle_vscroll	lda	scroll_speed
+		clc
+		adc	yscroll
+		sta	yscroll		;; actually scroll (nmi/s0 hit will actually set this in the ppu)
+		dec	step
+		bne	.done
+		dec	step2
+		beq	.vscroll_done
+		dec	state		;; state back => vload2 (load in next row)
+		lda	#3
+		sta	step		;; load three more steps (1 row)
+.done		rts
+.vscroll_done	inc	state		;; state => VLOAD3 (load the new map back into the main table)
+		lda	#NAMETBL_MAIN
+		sta	dsttbl
+		lda	#LOAD_TYPE_OVER
+		sta	load_type
+		jmp	setup_load	;; this time we use setup_load, b/c we want the normal # of steps
+;;; }}}
+
+    code
+handle_vload3	dec	step		;; loading in NMI (still!)	
+		bne	.done
+		lda	#STATE_FREE	;; we're done, back to normal state
+		sta	state
+		jsr	toggle_viewtbl	;; flip to the newly loading new map in the main table
+		lda	#SCROLL_INITY
+		sta	yscroll		;; and get the scroll back where it belongs
+.done		rts
+
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; ENGINE HELPERS ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -391,6 +494,8 @@ handle_rload2	dec	step		;; actual loading is done in the nmi
 start_rscroll	inc     pos		;; right means pos ++
 		lda	#STATE_RSTAGE
 		sta	state
+		lda	#LOAD_TYPE_OVER
+		sta	load_type		;; we'll only use this type, so set it once here
 		lda	#NAMETBL_SWAP	;; the first load will happen in the swap table regardless
 		;; fallthrough to setup_stage
 ;;; }}}
@@ -405,6 +510,8 @@ setup_stage	sta	dsttbl
 ;; Start left scrolling {{{
 start_lscroll	lda	#STATE_LLOAD
 		sta	state
+		lda	#LOAD_TYPE_OVER
+		sta	load_type		;; we'll only use this type, so set it once here
 		lda	#NAMETBL_SWAP
 		sta	dsttbl
 		;; fallthrough to setup_load
@@ -416,6 +523,21 @@ setup_load	lda	#LOAD_STEPS
 		sta	step
 		jsr	load_start
 		rts
+;; }}}
+
+;; Start up/down scrolling {{{
+    code
+start_dscroll	lda	#SCROLL_DELTA	
+		bne	.common		;; always branches
+start_uscroll	lda	#-SCROLL_DELTA
+.common		sta	scroll_speed	
+		lda	#STATE_VLOAD
+		sta	state
+		lda	#LOAD_TYPE_OVER	;; first load is of current map into swap area
+		sta	load_type
+		lda	#NAMETBL_SWAP
+		sta	dsttbl	
+		jmp	setup_load
 ;; }}}
 
 ;; Toggle the viewed nametbl {{{
@@ -556,6 +678,11 @@ handlers=*
     dw	handle_rload
     dw	handle_rscroll
     dw	handle_rload2
+    dw	handle_vload
+    dw	handle_vstage
+    dw	handle_vload2
+    dw	handle_vscroll
+    dw	handle_vload3
 ;; }}}
 
 ;; Vector table {{{

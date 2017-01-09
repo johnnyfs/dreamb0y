@@ -9,6 +9,7 @@ count	ds	1		; generic counter
 column	ds	1		; generic column counter
 row	ds	1		; generic row counter
 frames  ds      2               ; 16-bit frame counter
+tmp     ds      1               ; tmp -- testing v scroll
 
 ;;
 ;; Engine interface
@@ -24,6 +25,7 @@ xscroll	ds	1		; read-only: current x scroll (for maintaining scroll after ppu re
 yscroll	ds	1		; read-only: curreny y scroll (same)
 state   ds      1               ; private: major engine state
 step    ds      1               ; private: counter for state transitions
+step2	ds	1		; private: secondary counter (TODO: can opt this into the high bits of step if we run out of zp)
 
 STATE_SEQ	= 0             ; limited user control (esc only), sequence is playing
 STATE_FREE     	= 1             ; normal play
@@ -35,10 +37,11 @@ STATE_RSTAGE    = 6             ; stage the new map
 STATE_RLOAD     = 7             ; load the staged new map to the swap table
 STATE_RSCROLL   = 8             ; scroll right from current old map to new map
 STATE_RLOAD2    = 9             ; load the (still staged) new map to the main table (and switch back)
-
-STATE_VSTAGE    = 5             ; staging for vertical scroll
-STATE_VLOAD     = 6             ; loading for vertical scroll
-STATE_VSCROLL   = 7             ; scrolling vertically
+STATE_VLOAD     = 10            ; loading for vertical scroll (first load is current map always, so can be opted out)
+STATE_VSTAGE	= 11		; then we stage the alt map
+STATE_VLOAD2	= 12		; then we alternate between loading the alt map and scrolling it into view
+STATE_VSCROLL   = 13            ; scrolling vertically
+STATE_VLOAD3	= 14		; then we load the new map back into the main table
 
 NAMETBL_MAIN    = $20
 NAMETBL_SWAP    = $24
@@ -71,14 +74,24 @@ stage_dst       ds	2               ; private: pointer to current position in sta
 
 ;; Map loading module
 LOAD_BYTES_PER=64
-LOAD_STEPS=18                           ; 12 rows (we don't load the status bar) of 32 chrs each + 6 rows of attr blocks
+LOAD_STEPS=18                           ; 12 rows (we don't load the status bar) of 64 chrs each + 6 rows of attr blocks
+VLOAD_STEPS=6				; VLOAD/SCROLL alternates in 6 groups of { 3 per load, scroll 10 units of 6 + one 4 at end? }
+
+load_type	ds	1		; public: set before calling load_start
+
+LOAD_TYPE_OVER   = 0			; standard: write over the map in its view position
+LOAD_TYPE_AFTER  = 1			; write forward from right after the map, wrapping around (for down scrolling)
+LOAD_TYPE_BEFORE = 2			; write backward from one row above the map, wrapping around (for up scrolling)
 
 load_chr_src	ds	2		; private: pointer to row of map to be loaded
 load_chr_dst    ds	2		; private: PPU address of current load in progress
 load_attr_src	ds	2		; private: pointer to attr to load
 load_attr_dst	ds	2		; private: pointer to attr write address in PPU
 load_step	ds	1		; private: internal state counter
+load_nightmare  ds      1               ; private: attribute off-by one nightmare mode (ugh)
 
 ;; Map scrolling module
+SCROLL_INITY=(248+$28) & $ff
+SCROLL_NMIY=248
 scroll_speed	ds	1               ; public: read/write to control scroll speed/direction
 
