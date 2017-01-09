@@ -90,6 +90,9 @@ load_attr_dst	ds	2		; private: pointer to attr write address in PPU
 load_step	ds	1		; private: internal state counter
 load_nightmare  ds      1               ; private: attribute off-by one nightmare mode (ugh)
 
+LOAD_NIGHTMARE_UP=-8
+LOAD_NIGHTMARE_DOWN=8
+
 ;; Map scrolling module
 SCROLL_INITY=(248+$28) & $ff
 SCROLL_NMIY=248

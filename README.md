@@ -126,8 +126,11 @@ Later we'll also have tools for sound!
 ![status-bar-shot](doc/status-bar-shot.png)
 
 ```
-☐  screen changes with arrows  
-☐  screen scrolls instead of changing  
+☑  screen changes with arrows  
+☑  screen scrolls instead of changing  
+
+TODO: proof!
+
 ☐  animated dreamboy walker   
 ☐  screen scrolls on edges  
 ☐  obstructions  

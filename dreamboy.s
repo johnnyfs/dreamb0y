@@ -458,7 +458,12 @@ handle_vscroll	lda	scroll_speed
 		clc
 		adc	yscroll
 		sta	yscroll		;; actually scroll (nmi/s0 hit will actually set this in the ppu)
-		dec	step
+                lda     yscroll         ;; special case
+                cmp     #252            ;; bad for some reason?
+                bne     .yfine
+                lda     #236
+                sta     yscroll
+.yfine		dec	step
 		bne	.done
 		dec	step2
 		beq	.vscroll_done

@@ -62,7 +62,7 @@ load_start      lda #0
 		;; setup ptrs for a reverse load
 .setup_reverse	lda #$05
 		sta load_chr_src + 1
-		lda #$00		    ;; ie, one row before the end
+		lda #$40		    ;; ie, one row before the end
 		sta load_chr_src
 
 		;; we'll start on the last attr row (48 - 8 or + 40)
@@ -75,12 +75,12 @@ load_start      lda #0
 
 		;; setup the dst ptrs for a reverse load
 .setup_rev_dst	lda dsttbl
+		sta load_chr_dst + 1	    ;; dst starts right before map in status bar $2X40
 		clc
 		adc #$03
-		sta load_chr_dst + 1	    ;; advance 10 rows (3 pages)
-		sta load_attr_dst + 1	    ;; attrs start at nametbl + $03C0
-		lda #$00
-		sta load_chr_dst
+		sta load_attr_dst + 1	    ;; attrs start at nametbl + $03C0 (whole status bar is one row)
+		lda #$40
+		sta load_chr_dst	    ;; load into second row of status bar first
 
 		lda #$C0		    ;; reverse load starts where status would be
 		sta load_attr_dst
@@ -170,7 +170,7 @@ load_next	dec load_step
 		dec load_chr_dst + 1
 		lda load_chr_dst + 1
 		cmp dsttbl		;; check if we've underrun (less than 20 for MAIN, 24 for SWAP)
-		bcc .no_chr_under
+		bcs .no_chr_under
 		
 		;; Underrun to 2[37]80
 		lda load_attr_dst + 1	;; ie, 23 for MAIN, 27 for SWAP
@@ -203,7 +203,7 @@ load_next	dec load_step
                 lda load_attr_src
                 tya
                 clc
-                adc #8
+                adc load_nightmare	;; use prev row for rev load, next row for forward
                 tay
                 lda (load_attr_src), y  ;; load the next row byte (should never wrap b/c we get here by overflowing)
                 asl
@@ -244,6 +244,7 @@ load_next	dec load_step
 		bcc .no_overattr
 		lda #$C0
 		sta load_attr_dst	;; never need to advance the high byte, whole table is 2[37]C0 - 2[37]FF
+		lda #LOAD_NIGHTMARE_DOWN
                 sta load_nightmare      ;; now we're in off-by-one nightmare mode
                 bne .load_attrs         ;; and we repeat this row (but don't inc the src ptr)
 
@@ -280,5 +281,7 @@ load_next	dec load_step
 		bcs .done_attr
 		lda #$F8
 		sta load_attr_dst
+		lda #LOAD_NIGHTMARE_DOWN
+		sta load_nightmare
+		jmp .load_attrs		;; immediately rerun?
 
-		bne .done_attr
