@@ -98,3 +98,33 @@ SCROLL_INITY=(248+$28) & $ff
 SCROLL_NMIY=248
 scroll_speed	ds	1               ; public: read/write to control scroll speed/direction
 
+;; Entity module
+ENTITIES=$0600                          ; start of entity page (s)
+ENTITY_FACE_DOWN=0
+ENTITY_FACE_UP=1
+ENTITY_FACE_RIGHT=2
+ENTITY_FACE_LEFT=3
+ENTITY_FACE_HORIZ=%00000010
+ENTITY_FACE_LEFT_IF_HORIZ=%00000001
+
+ENTITY_ATTRS_HFLIP=%01000000		; sprite bit 6 = flip horizontally
+
+;; Prime data (tmp, for testing; will be decomped from ent array to working data later)
+entity_face	ds	1               ;; 2 bits (+4 for step counter? +2 for state?)
+entity_y	ds	1               ;; byte
+entity_x	ds	1	        ;; byte
+entity_pal	ds	1               ;; 2 bits
+entity_base_chr	ds	1               ;; 256 /2 (for 8x16 mode) /2 (for 16x16 tiles) = 64(6)
+
+;; Working data (while drawing)
+entity_spr_y	ds	1 
+entity_spr_x	ds	1 
+entity_chr_i	ds	1
+entity_attrs	ds	1
+entity_index	ds	1
+entity_hx1	ds	1
+entity_hdx	ds	1
+entity_nudge	ds	1
+
+;; Sprites module
+SPRITES=$0700				; use page 7 for sprite DMA

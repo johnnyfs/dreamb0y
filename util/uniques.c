@@ -212,13 +212,13 @@ Uint32
 dereference_from_palettes(Uint32 color, SDL_Surface *palettes, int *palette_index, Uint32 *out_pal) {
     Uint32 *p = palettes->pixels;
     for (int i = 0; i < palettes->w; i ++) {
-        info("checking color 0x%x against palette color 0x%x\n", color, p[i]);
+        info("checking color 0x%08x against palette color 0x%08x\n", color, p[i]);
         if (p[i] == color) {
             *palette_index = i / n_colors_per_palette;
             return out_pal[i % n_colors_per_palette];
         }
     }
-    fail("color %ux from source image did not match any color in the reference palettes\n", color);
+    fail("color 0x%08x from source image did not match any color in the reference palettes\n", color);
 }
 
 /**
@@ -363,7 +363,7 @@ main(int argc, char *argv[])
 
     // Create the output tiles.
     int tiles_width = tile_width * uniques_out_tile_width;
-    int tiles_height = tile_height * ((max_uniques / uniques_out_tile_width) + ((max_uniques % tile_height > 0) ? 1 : 0));
+    int tiles_height = tile_height * ((max_uniques / uniques_out_tile_width) + ((max_uniques % uniques_out_tile_width > 0) ? 1 : 0));
     info("creating %dx%d output tile image for %d %dx%d tiles\n", tiles_width, tiles_height, max_uniques,
             tile_width, tile_height);
     SDL_Surface *tiles = SDL_CreateRGBSurface(0, tiles_width, tiles_height, src_format->BitsPerPixel,

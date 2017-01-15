@@ -60,10 +60,38 @@ tup.definerule {
         grayscale,
         uniques
     },
-    command = '../util/uniques status_bar.png -o status_bar_uniques.bmp -p status_bar_palette.png -C 1 -P grayscale.png -t status_bar.tbl',
+    command = '../util/uniques status_bar.png -o status_bar_uniques.bmp -p status_bar_palette.png -C 1 -P grayscale.png -t status_bar.tbl -U 18 -W 9',
     outputs = {
         'status_bar_uniques.bmp',
         'status_bar.tbl'
+    }
+}
+
+tup.definerule {
+    inputs = {
+        'widgets.png',
+        'realworld_day_sprite_palettes.png',
+        grayscale,
+        uniques
+    },
+    command = '../util/uniques widgets.png -o widgets_sprites.bmp -p realworld_day_sprite_palettes.png -C 4 -P grayscale.png -U 2 -W 2',
+    outputs = {
+        'widgets_sprites.bmp'
+    }
+}
+
+
+-- Player is a special case (for now)
+tup.definerule {
+    inputs = {
+        'dreamboy_realworld_day.png',
+        'realworld_day_sprite_palettes.png',
+        grayscale,
+        uniques
+    },
+    command = '../util/uniques dreamboy_realworld_day.png -o dreamboy_realworld_day_sprites.bmp -p realworld_day_sprite_palettes.png -P grayscale.png -U 30 -W 6 -w 8 -h 16',
+    outputs = {
+        'dreamboy_realworld_day_sprites.bmp'
     }
 }
 
@@ -92,6 +120,14 @@ tup.foreach_rule(
         extra_inputs = { img2chr, grayscale }
     },
     img2chr .. ' %f -o %o -p ' .. grayscale,
+    '%B.chr')
+
+tup.foreach_rule(
+    {
+        '*_sprites.bmp',
+        extra_inputs = { img2chr, grayscale }
+    },
+    img2chr .. ' -w 1 %f -o %o -p ' .. grayscale,
     '%B.chr')
 
 -- Create rule for converting the attr's, rle's, and chr's into crasm-compatible assembly statements.

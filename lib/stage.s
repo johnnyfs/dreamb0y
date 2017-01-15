@@ -3,8 +3,8 @@ RLE_INDEX_MASK=	    %11111100
 
 ;;
 ;; Initializes the map staging process. The map indexed by 
-;; map_pos is decompressed to the staging area at $2080 ($2000-
-;; $2080 contain the status bar). Subsequent calls to 
+;; map_pos is decompressed to the staging area at $0280 ($0200-
+;; $0280 contain the status bar). Subsequent calls to 
 ;; map_stage_next will advance the staging process one 16
 ;; pixel high line at a time (ie, 2 chr rows at a time).
 ;;

@@ -128,15 +128,22 @@ reset	sei
 	sta	$2005
 
 	;; write the magic sprite 0
-	ldx	#0
-	stx	$2003
 	lda	#37
-	sta	$2004		; top line of sprite intersects status bar
-	stx	$2004		; use chr 0 (ie, top left of status bar, which must have solid pixel at 1,1)
+        sta     SPRITES
+        lda     #1
+        sta     SPRITES + 1
 	lda	#%00100000
-	sta	$2004		; attributes don't matter
+        sta     SPRITES + 2
 	lda	#253
-	sta	$2004		; left side of sprite intersects status bar (ie, top left corner)
+        sta     SPRITES + 3
+
+        ;; TMP: jump start the player
+        jsr     entity_spawn_player
+        jsr     entity_draw_player
+
+        ;; Blast at least sprite 0 to the sprite mem
+        lda     #SPRITES >> 8   ;; high byte of sprite page
+        sta     $4014
 
 	;; initialize the engine
 	lda	#state_free		; engine initial state
@@ -149,7 +156,7 @@ reset	sei
         sta     pos
 
 	;; turn the screen back on.
-	lda	#%10001000	; vblank enabled; 8x16 sprites
+	lda	#%10101000	; vblank enabled; 8x16 sprites
 	sta	$2000
 	sta	status		; save for later
 	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
@@ -205,6 +212,8 @@ main	lda	frames
 	lda	status
 	sta	$2000
 
+	jsr	entity_draw_player	;; TODO: only when dirty (heh)
+
 	;; Loop (main will wait on frame ctr -- ie, until after status is drawn)
 .noscr	jmp	main
 ;; }}}
@@ -216,6 +225,10 @@ nmi	pha
         pha
         tya
         pha
+
+	;; Update sprites while we can
+	lda	#SPRITES >> 8
+	sta	$4014
 
         lda     state
 
@@ -290,21 +303,25 @@ handle_free jsr	joypad_strobe
 
 	    lsr
 	    bcc	.n_right
+	    jsr	entity_player_face_right
 	    jsr	start_rscroll
 	    clv
 	    bvc	.done
 .n_right    lsr
 	    bcc	.n_left
+	    jsr	entity_player_face_left
 	    jsr	start_lscroll
 	    clv
 	    bvc .done
 .n_left	    lsr
 	    bcc	.n_down
+	    jsr	entity_player_face_down
 	    jsr	start_dscroll
 	    clv
 	    bvc	.done
 .n_down	    lsr
 	    bcc	.n_up
+	    jsr	entity_player_face_up
 	    jsr	start_uscroll
 	    clv
 	    bvc	.done
@@ -559,8 +576,9 @@ toggle_viewtbl	lda	status
 
 ;; Modules {{{
     ;; test modules
-include	lib/ldmap.s
+include	lib/ldmap.s     ;; deprecated
     
+include lib/entity.s
 include lib/joypad.s
 include lib/load.s
 include lib/stage.s
@@ -579,10 +597,10 @@ palette	db	$0d, $1a, $27, $18
 	db	$0d, $1a, $32, $22
         db      $0d, $1a, $19, $34
 
-	db	$0d, $1a, $20, $04
-	db	$0d, $1a, $20, $04
-	db	$0d, $1a, $19, $08
-	db	$0d, $1a, $19, $08
+	db	$0d, $04, $20, $0d
+	db	$0d, $08, $38, $0d
+	db	$0d, $04, $20, $0d
+	db	$0d, $04, $20, $0d
 
 ;; Test map
 testmap=*
@@ -696,3 +714,11 @@ handlers=*
 	dw	reset 
 	dw	irq
 ;;; }}}
+
+;;;;;;;;;;;;;;;;;;;;; 
+;;; CHR REFERENCE ;;;
+;;;;;;;;;;;;;;;;;;;;;
+
+    ;; Include this in dummy mode so we can reference these values
+    dummy
+include realworld_day_tileset.s
