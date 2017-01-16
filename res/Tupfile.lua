@@ -74,7 +74,7 @@ tup.definerule {
         grayscale,
         uniques
     },
-    command = '../util/uniques widgets.png -o widgets_sprites.bmp -p realworld_day_sprite_palettes.png -C 4 -P grayscale.png -U 2 -W 2',
+    command = '../util/uniques widgets.png -o widgets_sprites.bmp -p realworld_day_sprite_palettes.png -C 4 -P grayscale.png -U 3 -W 3 -w 8 -h 16',
     outputs = {
         'widgets_sprites.bmp'
     }
@@ -89,7 +89,7 @@ tup.definerule {
         grayscale,
         uniques
     },
-    command = '../util/uniques dreamboy_realworld_day.png -o dreamboy_realworld_day_sprites.bmp -p realworld_day_sprite_palettes.png -P grayscale.png -U 30 -W 6 -w 8 -h 16',
+    command = '../util/uniques dreamboy_realworld_day.png -o dreamboy_realworld_day_sprites.bmp -p realworld_day_sprite_palettes.png -P grayscale.png -U 36 -W 6 -w 8 -h 16',
     outputs = {
         'dreamboy_realworld_day_sprites.bmp'
     }

@@ -27,6 +27,11 @@ state   ds      1               ; private: major engine state
 step    ds      1               ; private: counter for state transitions
 step2	ds	1		; private: secondary counter (TODO: can opt this into the high bits of step if we run out of zp)
 
+LSCROLL_THRESHOLD=8
+RSCROLL_THRESHOLD=254
+USCROLL_THRESHOLD=54
+DSCROLL_THRESHOLD=240
+
 STATE_SEQ	= 0             ; limited user control (esc only), sequence is playing
 STATE_FREE     	= 1             ; normal play
 STATE_LLOAD     = 2             ; load the staged old map to the swap table (and switch)
@@ -60,7 +65,7 @@ SCROLL_DELTA    = 256/SCROLL_STEPS
 ;;
 ;; Joypad module
 ;;
-;; Button/bit order 0-7: A B SELECT START UP DOWN LEFT RIGHT
+;; Button/bit order: A B SELECT START UP DOWN LEFT RIGHT
 ;;
 
 joypad_prev	ds	1               ; public: read-only to acquire state before last call to joypad_strobe
@@ -109,22 +114,70 @@ ENTITY_FACE_LEFT_IF_HORIZ=%00000001
 
 ENTITY_ATTRS_HFLIP=%01000000		; sprite bit 6 = flip horizontally
 
+ENTITY_STATE_STANDING=0
+ENTITY_STATE_WALKING=1
+
+ENTITY_KEY_CONTACT=0
+ENTITY_KEY_RECOIL=1
+ENTITY_KEY_PASSING=2
+ENTITY_KEY_HIGH_POINT=3
+
 ;; Prime data (tmp, for testing; will be decomped from ent array to working data later)
+
+entity_state	ds	1
 entity_face	ds	1               ;; 2 bits (+4 for step counter? +2 for state?)
 entity_y	ds	1               ;; byte
 entity_x	ds	1	        ;; byte
 entity_pal	ds	1               ;; 2 bits
 entity_base_chr	ds	1               ;; 256 /2 (for 8x16 mode) /2 (for 16x16 tiles) = 64(6)
+entity_key_n	ds	1		;; key w/ phase (0-7)
+entity_key	ds	1		;; current keyframe (0-3)
+entity_phase	ds	1		;; left leg, right leg, in anim cycle (0-1)
+entity_step	ds	1		;; countdown to next frame switch
+
+;; compressed model (tentative)
+;; entity_type	   const species + flags
+;; entity_state	   var flags
+;; entity_y
+;; entity_chr	   (chr << 2 | pal)
+;; entity_frame    ff sss zzz ?
+;; entity_x
 
 ;; Working data (while drawing)
-entity_spr_y	ds	1 
+entity_draw_y	    ds	1		;; current drawing y position
+entity_draw_x1	    ds	1		;; x position at which to draw first half
+entity_draw_x2	    ds	1		;; x position at which to draw second half
+entity_draw_attrs   ds	1
+entity_draw_chr_i   ds	1
+entity_draw_flip    ds	1
+entity_draw_phase   ds	1
+
+entity_dir_key	ds	1		;; memoize lookup 
+
 entity_spr_x	ds	1 
 entity_chr_i	ds	1
 entity_attrs	ds	1
 entity_index	ds	1
 entity_hx1	ds	1
 entity_hdx	ds	1
+entity_dchr     ds      1
 entity_nudge	ds	1
+
+;; Working data (while updating)
+entity_new_face	ds	1
+entity_dx	ds	1
+entity_dy	ds	1
 
 ;; Sprites module
 SPRITES=$0700				; use page 7 for sprite DMA
+
+;; Directions
+DIR_NONE=(-1)
+DIR_N=0
+DIR_NE=1
+DIR_E=2
+DIR_SE=3
+DIR_S=4
+DIR_SW=5
+DIR_W=6
+DIR_NW=7

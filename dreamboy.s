@@ -152,14 +152,12 @@ reset	sei
 	sta	maps
 	lda	#realworld_day >> 8
 	sta	maps + 1
-        lda     #0
-        sta     pos
 
 	;; turn the screen back on.
 	lda	#%10101000	; vblank enabled; 8x16 sprites
 	sta	$2000
 	sta	status		; save for later
-	lda	#%00011010	; image/sprite mask off/on, sprites/screen on 
+	lda	#%00011110	; image/sprite mask off/on, sprites/screen on 
 	sta	$2001
 ;; }}}
 
@@ -298,42 +296,56 @@ handle_seq  rts
     code
 handle_free jsr	joypad_strobe
 	    lda	joypad_next
-	    eor	joypad_prev	;; 0 ^ 1 || 1 ^ 0 => state changed
-	    and	joypad_next	;; & 1 => was pressed
+;;	    eor	joypad_prev	;; 0 ^ 1 || 1 ^ 0 => state changed
+;;	    and	joypad_next	;; & 1 => was pressed
+;;
+;;	    lsr
+;;	    bcc	.n_right
+;;	    ;;jsr	start_rscroll
+;;	    clv
+;;	    bvc	.done
+;;.n_right    lsr
+;;	    bcc	.n_left
+;;	    ;;jsr	start_lscroll
+;;	    clv
+;;	    bvc .done
+;;.n_left	    lsr
+;;	    bcc	.n_down
+;;	    ;;jsr	start_dscroll
+;;	    clv
+;;	    bvc	.done
+;;.n_down	    lsr
+;;	    bcc	.n_up
+;;	    ;;jsr	start_uscroll
+;;	    clv
+;;	    bvc	.done
+;;.n_up	    lsr
+;;	    bcc	.n_strt
+;;.n_strt	    lsr
+;;	    bcc	.n_sel
+;;.n_sel	    lsr
+;;	    beq	.n_b
+;;.n_b	    lsr
+;;;;	    beq .n_a
+.n_a        jsr entity_update_player
 
-	    lsr
-	    bcc	.n_right
-	    jsr	entity_player_face_right
-	    jsr	start_rscroll
-	    clv
-	    bvc	.done
-.n_right    lsr
-	    bcc	.n_left
-	    jsr	entity_player_face_left
-	    jsr	start_lscroll
-	    clv
-	    bvc .done
-.n_left	    lsr
-	    bcc	.n_down
-	    jsr	entity_player_face_down
-	    jsr	start_dscroll
-	    clv
-	    bvc	.done
-.n_down	    lsr
-	    bcc	.n_up
-	    jsr	entity_player_face_up
-	    jsr	start_uscroll
-	    clv
-	    bvc	.done
-.n_up	    lsr
-	    bcc	.n_strt
-.n_strt	    lsr
-	    bcc	.n_sel
-.n_sel	    lsr
-	    beq	.n_b
-.n_b	    lsr
-	    beq .done
-.done	    rts
+            ;; TODO: directly access player entity
+            lda entity_x
+            cmp #LSCROLL_THRESHOLD
+            bcs .no_lscroll
+            jsr start_lscroll
+.no_lscroll cmp #RSCROLL_THRESHOLD
+            bcc .no_rscroll
+            jsr start_rscroll
+.no_rscroll lda entity_y
+            cmp #USCROLL_THRESHOLD
+            bcs .no_uscroll
+            jsr start_uscroll
+.no_uscroll lda entity_y
+            cmp #DSCROLL_THRESHOLD
+            bcc .no_dscroll
+            jsr start_dscroll
+.no_dscroll rts
 ;;; }}}
 
 ;; Handle STATE_LLOAD (first pass: load the staged current map into the swap table and switch view) {{{
@@ -365,18 +377,31 @@ handle_lload2	dec	step		;; loading is done in nmi, here we just count down
 		rts
 .fallthrough	inc	state		;; state => LSCROLL
 		jsr	toggle_viewtbl	;; scroll starts fully scrolled & counts down, so POV is end (main) table
+                lda     #3
+                sta     step
 		;; since fully scrolled is scroll=256=0, fall through to prevent the table jumping
 ;; }}}
 
 ;; Handle STATE_LSCROLL (scroll from the old map in the swap table back to the new map in the main table) {{{
     code
-handle_lscroll	lda	xscroll
+handle_lscroll  lda     entity_x	
+                clc
+                adc     #SCROLL_DELTA
+                sta     entity_x
+                dec     step
+                bne     .no_nudge
+                lda     #4
+                sta     step
+                dec     entity_x
+.no_nudge       lda	xscroll
 		sec
 		sbc	#SCROLL_DELTA
 		sta	xscroll	
 		bne	.done		;; scroll left until 0
 		lda	#STATE_FREE
 		sta	state		;; and we're done
+                lda     #RSCROLL_THRESHOLD - 1
+                sta     entity_x
 .done		rts
 ;; }}}
 
@@ -396,12 +421,23 @@ handle_rload	dec	step		;; actual loading is done in the nmi
 		beq	.fallthrough
 		rts
 .fallthrough	inc	state		;; state => RSCROLL
+                lda     #3
+                sta     step            ;; scroll keeps track of itself; this is for nudging the player
 		;; fallthrough isn't necessary here, but keeps the speed consistent
 ;; }}}
 
 ;; Handle STATE_RSCROLL (scroll from the current map in the main table to the new map in the swap table) {{{
     code
-handle_rscroll	lda	#SCROLL_DELTA	
+handle_rscroll	lda	entity_x
+                sec
+                sbc     #SCROLL_DELTA        ;; TODO: directly access player ent
+                sta     entity_x
+                dec     step
+                bne     .no_nudge
+                lda     #5
+                sta     step
+                inc     entity_x
+.no_nudge       lda     #SCROLL_DELTA
 		clc
 		adc	xscroll
 		sta	xscroll
@@ -421,6 +457,8 @@ handle_rload2	dec	step		;; actual loading is done in the nmi
 		jsr	toggle_viewtbl
 		lda	#STATE_FREE
 		sta	state
+                lda     #LSCROLL_THRESHOLD + 1
+                sta     entity_x
 .done		rts
 ;; }}}
 
@@ -471,7 +509,11 @@ handle_vload2	dec	step
 
 ;;; Handle STATE_VSCROLL (scroll in the row just loaded) {{{
     code
-handle_vscroll	lda	scroll_speed
+handle_vscroll	lda	entity_y
+                sec
+                sbc     scroll_speed
+                sta     entity_y        ;; TODO: directly access player entity!
+                lda     scroll_speed
 		clc
 		adc	yscroll
 		sta	yscroll		;; actually scroll (nmi/s0 hit will actually set this in the ppu)
@@ -504,6 +546,13 @@ handle_vload3	dec	step		;; loading in NMI (still!)
 		jsr	toggle_viewtbl	;; flip to the newly loading new map in the main table
 		lda	#SCROLL_INITY
 		sta	yscroll		;; and get the scroll back where it belongs
+                lda     scroll_speed
+                bmi     .down
+                lda     #USCROLL_THRESHOLD + 1
+                sta     entity_y
+                rts
+.down           lda     #DSCROLL_THRESHOLD - 1
+                sta     entity_y
 .done		rts
 
 ;;;;;;;;;;;;;;;;;;;;;;
