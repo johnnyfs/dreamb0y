@@ -89,7 +89,7 @@ tup.definerule {
         grayscale,
         uniques
     },
-    command = '../util/uniques dreamboy_realworld_day.png -o dreamboy_realworld_day_sprites.bmp -p realworld_day_sprite_palettes.png -P grayscale.png -U 36 -W 6 -w 8 -h 16',
+    command = '../util/uniques dreamboy_realworld_day.png -o dreamboy_realworld_day_sprites.bmp -p realworld_day_sprite_palettes.png -P grayscale.png -U 48 -W 8 -w 8 -h 16',
     outputs = {
         'dreamboy_realworld_day_sprites.bmp'
     }

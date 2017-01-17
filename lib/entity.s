@@ -340,7 +340,7 @@ entity_update_player	lda entity_state
 
     ;; Lookup tables for drawing
 entity_draw_dy_by_key=*		    ;; bounce for walking anim
-    db	0, 1, 1, -1
+    db	0, 1, 0, -1
 
 entity_skin_dx_by_face=*	    ;; skin adjustment
     db	-4, -4, -3, -5
@@ -376,10 +376,10 @@ entity_draw_dx2_by_flip=*
     db	-8  ;; flip: draw left side second
     
 entity_standing_leg_pane_by_face=*
-    db	12  ;; DOWN
-    db	16  ;; UP
-    db	20  ;; RIGHT
-    db	20  ;; LEFT
+    db	16  ;; DOWN
+    db	20  ;; UP
+    db	24  ;; RIGHT
+    db	24  ;; LEFT
 
 entity_walking_leg_flip_by_face_and_phase=*
     db	 0,  1	;; DOWN
@@ -388,10 +388,10 @@ entity_walking_leg_flip_by_face_and_phase=*
     db	 1,  1	;; LEFT
 
 entity_walking_leg_pane_by_face_and_key_w_phase=*
-    db	24, 28, 28, 32, 24, 28, 28, 32
-    db	36, 40, 40, 44, 36, 40, 40, 44
-    db	48, 52, 52, 56, 60, 64, 64, 68
-    db	48, 52, 52, 56, 60, 64, 64, 68
+    db	32, 36, 40, 44, 32, 36, 40, 44
+    db	48, 52, 56, 60, 48, 52, 56, 60
+    db	64, 68, 72, 76, 80, 84, 88, 92
+    db	64, 68, 72, 76, 80, 84, 88, 92
 
     ;; Lookup tables for update
 entity_buttons_to_dir=*	    ;; UDLR
