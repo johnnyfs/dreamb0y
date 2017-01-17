@@ -128,12 +128,11 @@ Later we'll also have tools for sound!
 ```
 ☑  screen changes with arrows  
 ☑  screen scrolls instead of changing  
+☑  screen scrolls on edges  
+☑  obstructions  
 
-TODO: proof!
+TODO: proof! and a blog!
 
-☐  animated dreamboy walker   
-☐  screen scrolls on edges  
-☐  obstructions  
 ☐  music  
 ☐  other character sprites  
 ☐  interactions  

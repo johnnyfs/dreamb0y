@@ -3,6 +3,7 @@ utildir = '../util'
 uniques = utildir .. '/uniques'
 tblcut = utildir .. '/tblcut'
 img2chr = utildir .. '/img2chr'
+obs = utildir .. '/obs'
 tbl2attr = utildir .. '/tbl2attr'
 rowrle = utildir .. '/rowrle'
 bin2asm = utildir .. '/bin2asm'
@@ -11,10 +12,14 @@ grayscale = 'grayscale.png'
 -- Convert every tile of the form *_map.png into uniques, indeces, and palettes, cut to screen-sized units, then covert to NES format.
 for k, mapfile in pairs(mapfiles) do 
     stub = string.sub(mapfile, 1, string.len(mapfile) - 8)
+
     palfile = stub .. '_palettes.png'
     uoutfile = stub .. '_uniques.bmp'
     aoutfile = stub .. '_palettes.tbl'
     toutfile = stub .. '_indeces.tbl'
+
+    obsinfile = stub .. '_obs.txt'
+    obsoutfile = stub .. '_obs.tbl'
 
     tup.definerule {
         inputs = {
@@ -50,6 +55,32 @@ for k, mapfile in pairs(mapfiles) do
         },
         cutcmd,
         cutfiles)
+
+    tup.foreach_rule(
+        {
+            obsinfile,
+            extra_inputs = obs
+        },
+        obs .. ' %f -o %o -w 64 -h 48',
+        obsoutfile)
+
+    -- generate ie, realworld_day_obs_x_y.tbl
+    obscutfiles = {}
+    for y=0,3 do
+        for x=0,3 do
+            table.insert(obscutfiles, stub .. '_obs_' .. tostring(x) .. '_' .. tostring(y) .. '.tbl')
+        end
+    end
+
+    obscutcmd = tblcut .. ' %f -w 8 -h 48 -W 2 -H 12 -o ' .. stub .. '_obs_%%x_%%y.tbl'
+    tup.foreach_rule(
+        {
+            obsoutfile,
+            extra_inputs = tblcut
+        },
+        obscutcmd,
+        obscutfiles)
+
 end
 
 -- Status bar is a special case
@@ -142,3 +173,10 @@ tup.foreach_rule(
     bin2asm .. ' %f -o %o',
     '%f.s')
 
+tup.foreach_rule(
+    {
+        '*_obs_*_*.tbl',
+        extra_inputs = bin2asm
+    },
+    bin2asm .. ' %f -o %o',
+    '%f.s')

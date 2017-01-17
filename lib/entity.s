@@ -298,7 +298,7 @@ entity_update_player	lda entity_state
 			lda entity_dir_to_face, y
 			sta entity_face
 
-			;; Update position
+			;; Update position -- tentatively
 			tya
 			asl
 			asl
@@ -308,10 +308,26 @@ entity_update_player	lda entity_state
 			lda entity_dir_to_dx_by_key, y
 			clc
 			adc entity_x
-			sta entity_x
+			sta entity_new_x
 			lda entity_dir_to_dy_by_key, y
 			clc
 			adc entity_y
+			sta entity_new_y
+
+			;; Check new position for obstructions
+			jsr entity_is_obs
+			beq .not_obs
+
+			;; If obstructed, switch us back to standing
+			lda #ENTITY_STATE_STANDING
+			sta entity_state
+
+			rts
+
+			;; Copy over the verified new position
+.not_obs		lda entity_new_x	
+			sta entity_x
+			lda entity_new_y
 			sta entity_y
 
 			;; Advance cycle (TODO: improve this by reversing order?)
@@ -337,6 +353,73 @@ entity_update_player	lda entity_state
 			sta entity_step
 
 .advance_done		rts
+
+    code
+    ;; upon return bne will branch if (entity_new_x, entity_new_y) is obstructed, beq if clear
+entity_is_obs		lda #realworld_day_obs & $ff ;; TODO: set this in engine on map change
+			sta entity_obs_map
+			lda #realworld_day_obs >> 8
+			sta entity_obs_map + 1
+			ldy pos
+			iny
+.loop			dey
+			beq .ptr_set
+			lda #24			    ;; advance ptr by size of obs map
+			clc
+			adc entity_obs_map
+			sta entity_obs_map
+			bcc .loop
+			inc entity_obs_map + 1
+			bne .loop
+
+			;; Now the ptr is set
+			;; is_obs := obs_map[index] & bitmask
+		        ;;   where
+			;;     index = y' * row_pitch + x' / tiles_per_byte
+			;;     y' = y / 16                   -- ie, pixel pos / 16 tile size
+			;;     x' = x / 16                   -- ditto
+			;;     pitch = 2                     -- because 16 tiles per row...
+			;;     tiles_per_byte = 8            -- and 16/8 = 2
+			;;     bitmask = 1 << (7 - (x' % 8)) -- b/c lower x in higher bits
+.ptr_set    		lda entity_new_y
+			cmp #230	    ;; special case > 230, just allow it
+			bcc .not_out_of_range
+			lda #0
+			rts
+
+.not_out_of_range	sec
+			sbc #40		    ;; subtract 40 for status bar and missing row
+			lsr
+			lsr
+			lsr
+			lsr		    ;; y' = (y / 16)
+			asl		    
+			sta entity_tile_y   ;; tile_y = y' * 2
+			lda entity_new_x
+			lsr
+			lsr
+			lsr
+			lsr		    ;; x' = (x / 16)
+			sta entity_tile_x
+			and #%00000111
+			tay		    ;; Y = x' % 8
+			iny		    ;; Y = 1-8
+			lda #0
+			sec		    ;; now 1 ror makes this %10000000
+.shift_mask		ror		    ;; A = %10000000
+			dey
+			bne .shift_mask	    ;; so, shift 1-8 times (where 8 => %0000001)
+			sta entity_obs_mask
+			lda entity_tile_x    ;; restore x'
+			lsr
+			lsr
+			lsr
+			clc
+			adc entity_tile_y   ;; index = y' * 2 + x' / 8
+			tay
+			lda (entity_obs_map), y ;; now we have the obs field
+			and entity_obs_mask
+			rts			;; now beq/bne will branch
 
     ;; Lookup tables for drawing
 entity_draw_dy_by_key=*		    ;; bounce for walking anim

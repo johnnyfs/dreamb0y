@@ -167,6 +167,14 @@ entity_nudge	ds	1
 entity_new_face	ds	1
 entity_dx	ds	1
 entity_dy	ds	1
+entity_new_x	ds	1
+entity_new_y	ds	1
+
+;; Working data (for checking obs)
+entity_obs_map	ds	2               ; ptr for obs map (TODO: provide in engine)
+entity_tile_x	ds	1
+entity_tile_y	ds	1
+entity_obs_mask ds      1
 
 ;; Sprites module
 SPRITES=$0700				; use page 7 for sprite DMA

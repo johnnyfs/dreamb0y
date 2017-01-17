@@ -678,6 +678,7 @@ realworld_day=*
 	dw  realworld_day_2_3
 	dw  realworld_day_3_3
 
+	;; TODO: since the attrs are regular, store them elsewhere?
 realworld_day_0_0=*
 include res/realworld_day_palettes_0_0.attr.s
 include	res/realworld_day_indeces_0_0.tbl.rle.s
@@ -726,6 +727,24 @@ include	res/realworld_day_indeces_2_3.tbl.rle.s
 realworld_day_3_3=*
 include res/realworld_day_palettes_3_3.attr.s
 include	res/realworld_day_indeces_3_3.tbl.rle.s
+
+realworld_day_obs=*
+include res/realworld_day_obs_0_0.tbl.s
+include res/realworld_day_obs_1_0.tbl.s
+include res/realworld_day_obs_2_0.tbl.s
+include res/realworld_day_obs_3_0.tbl.s
+include res/realworld_day_obs_0_1.tbl.s
+include res/realworld_day_obs_1_1.tbl.s
+include res/realworld_day_obs_2_1.tbl.s
+include res/realworld_day_obs_3_1.tbl.s
+include res/realworld_day_obs_0_2.tbl.s
+include res/realworld_day_obs_1_2.tbl.s
+include res/realworld_day_obs_2_2.tbl.s
+include res/realworld_day_obs_3_2.tbl.s
+include res/realworld_day_obs_0_3.tbl.s
+include res/realworld_day_obs_1_3.tbl.s
+include res/realworld_day_obs_2_3.tbl.s
+include res/realworld_day_obs_3_3.tbl.s
 ;; }}}
 
 ;; Status bar {{{
