@@ -25,9 +25,9 @@ other assets are assembled with custom tools into formats compatible with crasm.
 Custom tools are incorporated into the make chain, written in clang-compatible C
 and are re-run automatically whenever an asset is edited.
 
-The project is assembled with [tup][tup], because it is fast and easy, and because it
-is the best system for extremely generic and frankensteined multi-language build
-paths. It uses gnu's [make][make] at the top level to maintain separate targets.
+This used to use [tup][tup], which was promising, but getting it to work on
+windows, which I started using again because of masochism/needing to have fewer
+than six hundred separate laptops, was pure blarg. Now it's just [make][make].
 
   [retro_usb]: http://www.retrousb.com/product_info.php?products_id=34
   [lib6502]: http://piumarta.com/software/lib6502/
@@ -61,7 +61,6 @@ platform.*
 ## Prerequisites for building
 
 * make - build system
-* tup - build system
 * crasm - 6502 assembler
 * objcopy - for srec conversion/file padding
 * gcc - for building the custom utilities
@@ -91,20 +90,26 @@ These are the custom utilties:
 
 Here's how they're used:
 
-big maps + palettes => uniques => tilesets + tile map + palette map
+`big maps + palettes => *uniques* => tilesets + tile map + palette map`
 
 `tilesets => *img2chr* => chr rom binary`
+
 `tile map => *tblcut* => screen-sized tile maps`
+
 `palettes => *tblcut* => screen-size palette maps`
 
 `chr rom binary => *bin2asm* => chr rom assembly declartions`
+
 `tile maps => *bin2asm* => map assembly declarations`
+
 `palette maps => *bin2asm* => attribute assembly declarations`
 
 `prg-rom source includes map and attribute assembly`
+
 `chr-rom source includes chr rom assembly`
 
 `header + prg-rom source + chr-rom source => *crasm* => cart srec`
+
 `cart srec => *objcopy* => cart rom`
 
 `cart rom => *nintendo* => fun`

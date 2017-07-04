@@ -230,6 +230,9 @@ nmi	pha
 
         lda     state
 
+;;; ADVANCE SOUND SUBSYSTEM ;;;
+
+
 ;;; LOAD STATE: advance the load one more chunk ;;;
 	
 	;; TODO: make this less inefficient? set an engine flag for loading?
@@ -248,6 +251,7 @@ nmi	pha
 	cmp	#STATE_VLOAD3
 	bne	.n_hld	
 
+	;; Advance the load state in nmi.
 .load	jsr     load_next
 
 	;; Set scroll and table for status bar
@@ -538,6 +542,7 @@ handle_vscroll	lda	entity_y
 		jmp	setup_load	;; this time we use setup_load, b/c we want the normal # of steps
 ;;; }}}
 
+;;; Handle STATE_VLOAD3 (load the new map back into the main table) {{{
     code
 handle_vload3	dec	step		;; loading in NMI (still!)	
 		bne	.done
@@ -554,6 +559,7 @@ handle_vload3	dec	step		;; loading in NMI (still!)
 .down           lda     #DSCROLL_THRESHOLD - 1
                 sta     entity_y
 .done		rts
+;;; }}}
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; ENGINE HELPERS ;;;
@@ -750,7 +756,7 @@ include res/realworld_day_obs_3_3.tbl.s
 ;; Status bar {{{
 
 status_bar=*
-include res/status_bar.tbl.s
+include res/status_bar_indeces.tbl.s
 ;; }}}
 
 ;;;;;;;;;;;;;;;

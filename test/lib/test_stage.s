@@ -47,6 +47,7 @@ include lib/stage.s
 test_maps=*
 	dw  test_map
 test_map=*
+	ds  48, 0
 include	test/lib/test_map.rle.s
 
 *=$fffa
