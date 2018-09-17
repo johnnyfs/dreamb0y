@@ -27,5 +27,6 @@ test/lib/expected_joypad_out.bin
 # Ignore the executables/aux files in the util directory.
 util/*
 !util/*.*
+!util/Makefile
 util/*.exe
 util/.ycm_extra_conf.py
