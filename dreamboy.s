@@ -4,7 +4,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;
 
 	cpu	6502
-	output	scode
+	output	scode	; motorola S-CODE output
+	ilist	ON	; show listing for includes
 
 include lib/zero.s
 
@@ -153,6 +154,13 @@ reset	sei
 	lda	#realworld_day >> 8
 	sta	maps + 1
 
+	;; choose the starting sound theme
+	lda	#test_theme & $ff	
+	sta	sound_theme
+	lda	#test_theme >> 8
+	sta	sound_theme + 1
+	jsr	sound_start_theme
+
 	;; turn the screen back on.
 	lda	#%10101000	; vblank enabled; 8x16 sprites
 	sta	$2000
@@ -230,9 +238,6 @@ nmi	pha
 
         lda     state
 
-;;; ADVANCE SOUND SUBSYSTEM ;;;
-
-
 ;;; LOAD STATE: advance the load one more chunk ;;;
 	
 	;; TODO: make this less inefficient? set an engine flag for loading?
@@ -263,6 +268,8 @@ nmi	pha
 	sta     $2005		    ;; x scroll is always 0 for the status bar
 	lda	#SCROLL_NMIY
         sta     $2005		    ;; scroll is always init state for status bar
+
+	;; Advance sound subsystem
 
 	;; Increment the frame counter
 .done	inc	frames
@@ -636,6 +643,7 @@ include	lib/ldmap.s     ;; deprecated
 include lib/entity.s
 include lib/joypad.s
 include lib/load.s
+include lib/sound.s
 include lib/stage.s
 include lib/status.s
 ;; }}}
@@ -757,6 +765,25 @@ include res/realworld_day_obs_3_3.tbl.s
 
 status_bar=*
 include res/status_bar_indeces.tbl.s
+;; }}}
+
+;; Music themes {{{
+
+test_theme=*
+	dw	test_instr, 0, 0, 0
+	db	1 ;; length in chains before repeat
+	;;	sq1
+	dw	test_chain1,	0,	0,	0
+
+test_chain1=*
+	db	E3, QN, B3, QN, Fs3, QN, E3, QN, SOUND_CMD_REPEAT
+
+test_instr=*
+	db	%00110000 ; duty 12.5, software volume
+	db	%00000000 ; no sweep
+	db	%00000000 ; no length
+	db	%11011111 ; for now...
+
 ;; }}}
 
 ;;;;;;;;;;;;;;;
