@@ -200,7 +200,9 @@ sound_chain_sq1	ds	2	; ptr to current chain for first square wave channel
 sound_chain_sq2	ds	2	; ptr to current chain for second square wave channel
 sound_chain_tri	ds	2	; ptr to current chain for triangle wave channel
 sound_chain_noi	ds	2	; ptr to current chain for noise channel
+SOUND_CHAINS_SIZE=*-sound_chains
 sound_theme_idx	ds	1	; offset into current theme
+sound_theme_vol	ds	1	; master volume bitmask (for fadeout/in)
 
 ;; Per-channel instrument settings
 sound_instrs=*
@@ -216,6 +218,9 @@ sound_sq1	ds	SOUND_CHANNEL_SIZE
 sound_sq2	ds	SOUND_CHANNEL_SIZE
 sound_tri	ds	SOUND_CHANNEL_SIZE
 sound_noi	ds	SOUND_CHANNEL_SIZE
+SOUND_CHANNELS_END=*
+
+SOUND_DATA_SIZE=*-sound_theme
 
 ; Square wave instrument settings
 *=0
@@ -244,15 +249,3 @@ sound_instr_noi_env	ds	1
 sound_chain_idx		ds	1			;; offset in channel's current chain
 sound_chain_wait	ds	1			;; duration to wait until next note/cmd
 SOUND_CHANNEL_SIZE=*
-
-;;;;;;;;;;;;;
-;; Structs ;;
-;;;;;;;;;;;;;
-
-;; Sound defines
-	dummy
-*=0
-SOUND_INSTR_PTRS	ds	8
-SOUND_CHAIN_PTRS	ds	8
-SOUND_THEME_SIZE=*
-

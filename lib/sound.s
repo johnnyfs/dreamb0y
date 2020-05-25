@@ -154,26 +154,29 @@ sound_start_theme 	lda	#sound_noi_instr & $ff
 			bpl	.next_instr_ptr ; we know it's positive
 			
 			;; Reset the channel vars
-.instr_done 		rts
+.instr_done 		iny			; y was -1, so is now 0
+			tya			; a = 0
+			ldy	#SOUND_CHANNEL_SIZE * 4 - 1
+.clear_channel		sta	sound_channels, y	; clear idx/wait to 0 for all
+			dey
+			bpl	.clear_channel
 
-;			iny			; y was -1, so is now 0
-;			tya			; a = 0
-;			ldy	#SOUND_CHANNEL_SIZE * 4 - 1
-;.clear_channel		sta	sound_channels, y	; clear idx/wait to 0 for all
-;			dey
-;			bpl	.clear_channel
-;
-;			;; Set the chain ptrs
-;			ldy	#SOUND_CHAIN_PTRS	; right after instr pointers
-;			ldx	#SOUND_THEME_SIZE - SOUND_CHAIN_PTRS ; for all ptrs
-;.set_chains		lda	(sound_theme), y
-;			sta	sound_chains, y 
-;			iny
-;			dex
-;			bne	.set_chains
-;
-;			rts
+			;; Set the chain ptrs
+			ldy	#8		; right after the instr ptrs
+			ldx	#SOUND_CHAINS_SIZE
+.set_chain_ptrs		lda	(sound_theme), y
+			sta	sound_chains - 8, y 
+			iny
+			dex
+			bne	.set_chain_ptrs
 
+			txa			; x must be 0 here
+			sta	sound_theme_idx	; finally, 0 out 
+			sta	sound_theme_vol ; the global vars
+
+			rts
+
+			;; Handle NULL instruments by 0ing out the settings
 .null_instr		dey			; we skipped dey to br here	
 			sty	srci		; save the theme index
 			ldy	#SOUND_INSTR_SIZE - 1

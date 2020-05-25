@@ -9,7 +9,12 @@ include	lib/zero.s
 
 *=$8000
 	code
-reset	lda	#test_theme1 & $ff
+reset	lda	#$ff	; fill zero page with $ff so 0-writes stand out
+	ldy	#0
+.mark_z	sta	0, y
+	iny
+	bne	.mark_z
+	lda	#test_theme1 & $ff
 	sta	sound_theme
 	lda	#test_theme1 >> 8
 	sta	sound_theme + 1
@@ -55,24 +60,25 @@ reset	lda	#test_theme1 & $ff
 
 	code
 write_sound_zp	ldy	#0
-		ldx	#SOUND_INSTR_SIZE * 4
-.next		lda	sound_instrs, y
+		ldx	#SOUND_DATA_SIZE + 12 ; + extra bytes to align xxd
+.next		lda	sound_theme, y
 		sta	STDIO
 		iny
 		dex
 		bne	.next
+
 		rts
 
 include	lib/sound.s
 
 test_theme1	dw	test_instr1, test_instr2, test_instr3, test_instr4
-		dw	test_chain1, 0, 0, 0
+		dw	test_chain1, test_chain2, test_chain3, test_chain4 
 test_theme2	dw	test_instr4, test_instr2, test_instr1, test_instr3
-		dw	0, 0, 0, 0
+		dw	test_chain2, test_chain1, test_chain4, test_chain3
 test_theme3	dw	test_instr1, test_instr2, 0, test_instr4
-		dw	0, 0, 0, 0
+		dw	test_chain1, test_chain2, test_chain3, 0
 test_theme4	dw	0, test_instr2, test_instr3, test_instr4
-		dw	0, 0, 0, 0
+		dw	test_chain1, test_chain2, test_chain3, 0
 test_theme5	dw	test_instr1, test_instr2, test_instr3, 0
 		dw	0, 0, 0, 0
 test_theme6	dw	0, 0, 0, 0
@@ -84,6 +90,9 @@ test_instr3	db	$08, $09, $0A, $0B
 test_instr4	db	$0C, $0D, $0E, $0F
 
 test_chain1	dw	$00
+test_chain2	dw	$00
+test_chain3	dw	$00
+test_chain4	dw	$00
 
 *=$fffa
     dw  $0000
