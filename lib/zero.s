@@ -195,6 +195,7 @@ DIR_NW=7
 
 ;; Engine-level values
 sound_theme	ds	2	; ptr to current playing theme
+sound_chains=*
 sound_chain_sq1	ds	2	; ptr to current chain for first square wave channel
 sound_chain_sq2	ds	2	; ptr to current chain for second square wave channel
 sound_chain_tri	ds	2	; ptr to current chain for triangle wave channel
@@ -243,4 +244,15 @@ sound_instr_noi_env	ds	1
 sound_chain_idx		ds	1			;; offset in channel's current chain
 sound_chain_wait	ds	1			;; duration to wait until next note/cmd
 SOUND_CHANNEL_SIZE=*
+
+;;;;;;;;;;;;;
+;; Structs ;;
+;;;;;;;;;;;;;
+
+;; Sound defines
+	dummy
+*=0
+SOUND_INSTR_PTRS	ds	8
+SOUND_CHAIN_PTRS	ds	8
+SOUND_THEME_SIZE=*
 

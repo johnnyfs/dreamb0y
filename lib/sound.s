@@ -1,23 +1,7 @@
-;;
-;; Loads and advances the current musical theme & mixes in
-;; sound effects as needed.
-;;
-
-	;; Note pitches
-sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
-		dw	$059d, $054d, $0500, $04b8, $0475, $0435
-		dw	$03f8, $03bf, $0389, $0356, $0326, $02f9
-		dw	$02ce, $02a6, $027f, $025c, $023a, $021a
-		dw	$01fb, $01df, $01c4, $01ab, $0193, $017c
-		dw	$0167, $0152, $013f, $012d, $011c, $010c
-		dw	$00fd, $00ef, $00e2, $00d2, $00c9, $00bd
-		dw	$00b3, $00a9, $009f, $0096, $008e, $0086
-		dw	$007e, $0077, $0070, $006a, $0064, $005e
-		dw	$0059, $0054, $004f, $004b, $0046, $0042
-		dw	$003f, $003b, $0038, $0034, $0031, $002f
-		dw	$002c, $0029, $0027, $0025, $0023, $0021
-		dw	$001f, $001d, $001b, $001a, $0018, $0017
-		dw	$0015, $0014, $0013, $0012, $0011, $0010
+;;;
+;;; Loads and advances the current musical theme & mixes in
+;;; sound effects as needed.
+;;;
 
 	;; Note pitch indeces
 A1	equ	0
@@ -125,16 +109,17 @@ SN	equ	3	; sixteenth note
 TN	equ	1	; thirty-second note
 XN	equ	0	; sixty-fourth note
 ;; Effects flags (high 3 bits)
-	;; TBD
+       ;; TBD
 
-;; Commands (mutually exclusive with notes, indicated by high bit
+; Commands (mutually exclusive with notes, indicated by high bit
 SOUND_CMD_FLAG		equ	%1000000
 SOUND_CMD_REPEAT	equ	(SOUND_CMD_FLAG|0)	; return to beginning of chain
 
-;; Load a theme and prepare the engine to play it
-sound_start_theme	lda	#(SOUND_INSTRS_END - SOUND_INSTR_SIZE) & $ff
+; Load a theme and prepare the engine to play it
+			code
+sound_start_theme 	lda	#sound_noi_instr & $ff
 			sta	dst	; start writing at last instr
-			lda	#(SOUND_INSTRS_END - SOUND_INSTR_SIZE) >> 8
+			lda	#sound_noi_instr >> 8
 			sta	dst + 1
 
 			ldy	#7	; 4 channels * 2 bytes per instr ptr - 1
@@ -142,6 +127,7 @@ sound_start_theme	lda	#(SOUND_INSTRS_END - SOUND_INSTR_SIZE) & $ff
 			beq	.null_instr
 			sta	src + 1
 			dey
+			lda	(sound_theme), y
 			sta	src	; start reading w/ pointer to last instrument
 
 			tya		; save our index into *theme*
@@ -153,13 +139,13 @@ sound_start_theme	lda	#(SOUND_INSTRS_END - SOUND_INSTR_SIZE) & $ff
 			dey
 			bpl	.sync_instr
 
-			txa			; we restore and check
+.null_rejoin		txa			; we restore and check
 			tay			; the theme index
 			dey			; before dec'ing the
 			bmi	.instr_done	; dst ptr
 			tya			; <- save the new y!
 
-.null_rejoin		ldy	#SOUND_INSTR_SIZE
+			ldy	#SOUND_INSTR_SIZE
 .adv_instr_dst		dec	dst		; dst -= instrument size
 			dey
 			bne	.adv_instr_dst
@@ -167,12 +153,49 @@ sound_start_theme	lda	#(SOUND_INSTRS_END - SOUND_INSTR_SIZE) & $ff
 			tay			; restore the new y (from A!)
 			bpl	.next_instr_ptr ; we know it's positive
 			
-.instr_done		rts
+			;; Reset the channel vars
+.instr_done 		rts
 
-.null_instr		sty	srci		; save the theme index
-			ldy	#SOUND_INSTR_SIZE
-.next_null		sta	(dst), y	; a must == 0 to be here...
+;			iny			; y was -1, so is now 0
+;			tya			; a = 0
+;			ldy	#SOUND_CHANNEL_SIZE * 4 - 1
+;.clear_channel		sta	sound_channels, y	; clear idx/wait to 0 for all
+;			dey
+;			bpl	.clear_channel
+;
+;			;; Set the chain ptrs
+;			ldy	#SOUND_CHAIN_PTRS	; right after instr pointers
+;			ldx	#SOUND_THEME_SIZE - SOUND_CHAIN_PTRS ; for all ptrs
+;.set_chains		lda	(sound_theme), y
+;			sta	sound_chains, y 
+;			iny
+;			dex
+;			bne	.set_chains
+;
+;			rts
+
+.null_instr		dey			; we skipped dey to br here	
+			sty	srci		; save the theme index
+			ldy	#SOUND_INSTR_SIZE - 1
+.next_null		sta	(dst), y	; A must == 0 to be here...
 			dey
-			bne	.next_null
-			lda	srci		; but restore it into A
-			beq	.null_rejoin
+			bpl	.next_null
+			ldx	srci		; but restore it into X
+			bpl	.null_rejoin
+
+	;; Note pitches
+sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
+		dw	$059d, $054d, $0500, $04b8, $0475, $0435
+		dw	$03f8, $03bf, $0389, $0356, $0326, $02f9
+		dw	$02ce, $02a6, $027f, $025c, $023a, $021a
+		dw	$01fb, $01df, $01c4, $01ab, $0193, $017c
+		dw	$0167, $0152, $013f, $012d, $011c, $010c
+		dw	$00fd, $00ef, $00e2, $00d2, $00c9, $00bd
+		dw	$00b3, $00a9, $009f, $0096, $008e, $0086
+		dw	$007e, $0077, $0070, $006a, $0064, $005e
+		dw	$0059, $0054, $004f, $004b, $0046, $0042
+		dw	$003f, $003b, $0038, $0034, $0031, $002f
+		dw	$002c, $0029, $0027, $0025, $0023, $0021
+		dw	$001f, $001d, $001b, $001a, $0018, $0017
+		dw	$0015, $0014, $0013, $0012, $0011, $0010
+
