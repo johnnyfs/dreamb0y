@@ -161,6 +161,23 @@ reset	sei
 	sta	sound_theme + 1
 	jsr	sound_start_theme
 
+	;; turn sound channels on
+	lda	#%00000000
+	ldy	#$0f
+.zsound	sta	$4000, y
+	dey
+	bpl	.zsound
+	lda	#%00001111
+	sta	$4015
+	;lda	#%00111111
+	;sta	$4000
+	;lda	#0
+	;sta	$4001
+	;lda	#$ab
+	;sta	$4002
+	;lda	#$01
+	;sta	$4003
+
 	;; turn the screen back on.
 	lda	#%10101000	; vblank enabled; 8x16 sprites
 	sta	$2000
@@ -270,6 +287,7 @@ nmi	pha
         sta     $2005		    ;; scroll is always init state for status bar
 
 	;; Advance sound subsystem
+	jsr	sound_advance
 
 	;; Increment the frame counter
 .done	inc	frames
@@ -771,15 +789,13 @@ include res/status_bar_indeces.tbl.s
 
 test_theme=*
 	dw	test_instr, 0, 0, 0
-	db	1 ;; length in chains before repeat
-	;;	sq1
-	dw	test_chain1,	0,	0,	0
+	dw	test_chain1, 0, 0, 0
 
 test_chain1=*
 	db	E3, QN, B3, QN, Fs3, QN, E3, QN, SOUND_CMD_REPEAT
 
 test_instr=*
-	db	%00110000 ; duty 12.5, software volume
+	db	%00111111 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00000000 ; no sweep
 	db	%00000000 ; no length
 	db	%11011111 ; for now...

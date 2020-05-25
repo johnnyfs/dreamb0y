@@ -112,7 +112,7 @@ XN	equ	0	; sixty-fourth note
        ;; TBD
 
 ; Commands (mutually exclusive with notes, indicated by high bit
-SOUND_CMD_FLAG		equ	%1000000
+SOUND_CMD_FLAG		equ	%10000000
 SOUND_CMD_REPEAT	equ	(SOUND_CMD_FLAG|0)	; return to beginning of chain
 
 ; Load a theme and prepare the engine to play it
@@ -155,9 +155,12 @@ sound_start_theme 	lda	#sound_noi_instr & $ff
 			
 			;; Reset the channel vars
 .instr_done 		iny			; y was -1, so is now 0
-			tya			; a = 0
 			ldy	#SOUND_CHANNEL_SIZE * 4 - 1
-.clear_channel		sta	sound_channels, y	; clear idx/wait to 0 for all
+.clear_channel		lda	#1
+			sta	sound_channels, y	; clear wait to 1
+			dey
+			lda	#0
+			sta	sound_channels, y	; clear index to 0
 			dey
 			bpl	.clear_channel
 
@@ -171,20 +174,65 @@ sound_start_theme 	lda	#sound_noi_instr & $ff
 			bne	.set_chain_ptrs
 
 			txa			; x must be 0 here
-			sta	sound_theme_idx	; finally, 0 out 
+			sta	sound_theme_idx	; finally, 0 out   <- clears scratch
 			sta	sound_theme_vol ; the global vars
 
 			rts
 
 			;; Handle NULL instruments by 0ing out the settings
 .null_instr		dey			; we skipped dey to br here	
-			sty	srci		; save the theme index
+			sty	sound_theme_idx	; use this as scratch (we'll clear it later)
 			ldy	#SOUND_INSTR_SIZE - 1
 .next_null		sta	(dst), y	; A must == 0 to be here...
 			dey
 			bpl	.next_null
-			ldx	srci		; but restore it into X
+			ldx	sound_theme_idx	; but restore it into X
 			bpl	.null_rejoin
+
+;;;;;
+;; advance the sound system once frame
+	code
+sound_advance		dec	sound_sq1 + sound_chain_wait ; count back duration
+			bne	.done                        ; don't do anything until we've hit 0
+			ldy	sound_sq1 + sound_chain_idx  ; get current index into sq1
+.repeat			lda	(sound_chain_sq1), y         ; get next note/cmd
+			bmi	.do_command                  ; hi bit => command
+
+			;; start the note
+			asl			; index * 2 = offset
+			tax
+			lda	sound_sq1_instr + sound_instr_dut_len_vol
+			sta	$4000
+			lda	sound_sq1_instr + sound_instr_sweep
+			sta	$4001
+			lda	sound_pitches, x ; load low byte
+			sta	$4002
+			inx
+			lda	sound_pitches, x ; load high byte
+			ora	sound_sq1_instr + sound_instr_len_load
+			sta	$4003
+
+			;; set the duration
+			iny
+			beq	.hang	;; we mustn't roll over!
+			lda	(sound_chain_sq1), y
+			sta	sound_sq1 + sound_chain_wait
+
+			;; advance to next note/command
+			iny
+			beq	.hang	;; we mustn't roll over!
+			sty	sound_sq1 + sound_chain_idx
+
+			rts
+			
+.hang			jmp	.hang	;; for now (TODO: implement brk dump)
+		
+			;; handle a command
+.do_command		cmp	#SOUND_CMD_REPEAT
+			bne	.hang
+			ldy	#0
+			beq	.repeat
+.done			rts
 
 	;; Note pitches
 sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
