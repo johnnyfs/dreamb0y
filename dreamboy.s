@@ -6,6 +6,7 @@
 	cpu	6502
 	output	scode	; motorola S-CODE output
 	ilist	ON	; show listing for includes
+	mlist	ON	; show listing for macros
 
 include lib/zero.s
 
@@ -788,15 +789,29 @@ include res/status_bar_indeces.tbl.s
 ;; Music themes {{{
 
 test_theme=*
-	dw	test_instr, 0, 0, 0
-	dw	test_chain1, 0, 0, 0
+	dw	test_instr1, test_instr2, 0, 0
+	dw	test_chain1, test_chain2, 0, 0
 
 test_chain1=*
-	db	E3, QN, B3, QN, Fs3, QN, E3, QN, SOUND_CMD_REPEAT
+	db	E3, QN, B4, QN, Fs3, QN, E3, QN
+	db	E3, QN, Gs3, QN, B4, QN, E3, QN
 
-test_instr=*
-	db	%00111111 ; duty 12.5, software volume (TODO: 0 volume)
-	db	%00000000 ; no sweep
+	db	SOUND_CMD_REPEAT
+test_chain2=*
+	db	Gs3, QN, Ds4, QN, Cs4, QN, Gs3, QN
+	db	B4, QN, Ds4, EN, Ds4, EN, Fs3, QN, B4, QN
+
+	db	SOUND_CMD_REPEAT
+
+test_instr1=*
+	db	%11111111 ; duty 12.5, software volume (TODO: 0 volume)
+	db	%00001000 ; no sweep (negate on so channel isn't muted)
+	db	%00000000 ; no length
+	db	%11011111 ; for now...
+
+test_instr2=*
+	db	%11111111 ; duty 12.5, software volume (TODO: 0 volume)
+	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	%00000000 ; no length
 	db	%11011111 ; for now...
 

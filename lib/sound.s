@@ -3,6 +3,9 @@
 ;;; sound effects as needed.
 ;;;
 
+SOUND_CH_REGS=$4000 ;; PPU channel registers start at $4000
+SOUND_REGS_PER_CH=4 ;; 4 registers per channel
+
 	;; Note pitch indeces
 A1	equ	0
 Bb1	equ	1
@@ -29,31 +32,41 @@ Gb2	equ	21
 G2	equ	22
 Ab2	equ	23
 A3	equ	24
+As3	equ	25
 Bb3	equ	25
 B3	equ	26
 C3	equ	27
+Cs3	equ	28
 Db3	equ	28
 D3	equ	29
+Ds3	equ	30
 Eb3	equ	30
 E3	equ	31
 F3	equ	32
 Fs3	equ	33
 Gb3	equ	33
 G3	equ	34
+Gs3	equ	35
 Ab3	equ	35
 A4	equ	36
+As4	equ	37
 Bb4	equ	37
 B4	equ	38
 C4	equ	39
+Cs4	equ	40
 Db4	equ	40
 D4	equ	41
+Ds4	equ	42
 Eb4	equ	42
 E4	equ	43
 F4	equ	44
+Fs4	equ	45
 Gb4	equ	45
 G4	equ	46
+Gs4	equ	47
 Ab4	equ	47
 A5	equ	48
+As5	equ	49
 Bb5	equ	49
 B5	equ	50
 C5	equ	51
@@ -100,20 +113,81 @@ E8	equ	91
 F8	equ	92
 Gb8	equ	93
 
-;; Note duration (low 5 bits); engine adds 1
-WN	equ	63	; whole note
-HN	equ	31	; half note
-QN	equ	15	; quarter note
-EN	equ	7	; eighth note
-SN	equ	3	; sixteenth note
-TN	equ	1	; thirty-second note
-XN	equ	0	; sixty-fourth note
+;; Note duration (notes play until -1, so all values are 2^x-1)
+WN	equ	127	; whole note
+HN	equ	63	; half note
+QN	equ	31	; quarter note
+EN	equ	15	; eighth note
+SN	equ	7	; sixteenth note
+TN	equ	3	; thirty-second note
+XN	equ	1	; sixty-fourth note
+YN	equ	0	; thirty-second note
 ;; Effects flags (high 3 bits)
        ;; TBD
 
 ; Commands (mutually exclusive with notes, indicated by high bit
 SOUND_CMD_FLAG		equ	%10000000
 SOUND_CMD_REPEAT	equ	(SOUND_CMD_FLAG|0)	; return to beginning of chain
+
+;; Advance the indexed sound channel
+;; MACRO \1:channel
+;;   channel: the index 0-3 of sq1, sq2, tri, and noi
+SOUND_CHANNEL_ADVANCE	MACRO
+			;; Do nothing if there is no chain for this channel
+			lda	sound_chains + 2 * \1
+			beq	.done_\1
+			;; Count back duration to (-1)
+			dec	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_wait
+			bpl	.done_\1
+			;; Advance the index into the channel
+			ldy	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_idx
+			;; High bid set => process command; otherwise => play note
+.repeat_\1		lda	(sound_chains + 2 * \1), y
+			bmi	.do_command_\1
+
+			;; Start the note
+			asl			; index * 2 = offset into table
+			tax
+
+			;; Set the duty/volume register (TODO: impl envelope for sq/noise)
+			lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_dut_len_vol
+			sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH
+
+			;; Set the sweep register
+			;; TODO: nest a macro that only bothers for sq1/2?
+			;lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_sweep
+			;sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 1
+
+			;; Set the pitch
+			lda	sound_pitches, x	; load low byte of pitch
+			sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 2
+			inx
+			lda	sound_pitches, x	; load high byte
+			;; Mix in length load (TODO: do we want this?)
+			ora	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_len_load
+			sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 3
+
+			;; Set the duration
+			iny
+			beq	.hang_\1
+			lda	(sound_chains + 2 * \1), y
+			sta	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_wait
+
+			;; Advance to next note/command
+			iny
+			beq	.hang_\1
+			sty	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_idx
+			bne	.done_\1
+
+.hang_\1		jmp	.hang_\1	; for now just crash out
+
+			;; Handle a command
+.do_command_\1		cmp	#SOUND_CMD_REPEAT
+			bne	.hang_\1	; crash on unrecognized commands
+			ldy	#0
+			beq	.repeat_\1
+.done_\1		nop			; TODO: be smarter
+			ENDM
 
 ; Load a theme and prepare the engine to play it
 			code
@@ -155,12 +229,9 @@ sound_start_theme 	lda	#sound_noi_instr & $ff
 			
 			;; Reset the channel vars
 .instr_done 		iny			; y was -1, so is now 0
+			tya
 			ldy	#SOUND_CHANNEL_SIZE * 4 - 1
-.clear_channel		lda	#1
-			sta	sound_channels, y	; clear wait to 1
-			dey
-			lda	#0
-			sta	sound_channels, y	; clear index to 0
+.clear_channel		sta	sound_channels, y	; clear channel
 			dey
 			bpl	.clear_channel
 
@@ -189,51 +260,6 @@ sound_start_theme 	lda	#sound_noi_instr & $ff
 			ldx	sound_theme_idx	; but restore it into X
 			bpl	.null_rejoin
 
-;;;;;
-;; advance the sound system once frame
-	code
-sound_advance		dec	sound_sq1 + sound_chain_wait ; count back duration
-			bne	.done                        ; don't do anything until we've hit 0
-			ldy	sound_sq1 + sound_chain_idx  ; get current index into sq1
-.repeat			lda	(sound_chain_sq1), y         ; get next note/cmd
-			bmi	.do_command                  ; hi bit => command
-
-			;; start the note
-			asl			; index * 2 = offset
-			tax
-			lda	sound_sq1_instr + sound_instr_dut_len_vol
-			sta	$4000
-			lda	sound_sq1_instr + sound_instr_sweep
-			sta	$4001
-			lda	sound_pitches, x ; load low byte
-			sta	$4002
-			inx
-			lda	sound_pitches, x ; load high byte
-			ora	sound_sq1_instr + sound_instr_len_load
-			sta	$4003
-
-			;; set the duration
-			iny
-			beq	.hang	;; we mustn't roll over!
-			lda	(sound_chain_sq1), y
-			sta	sound_sq1 + sound_chain_wait
-
-			;; advance to next note/command
-			iny
-			beq	.hang	;; we mustn't roll over!
-			sty	sound_sq1 + sound_chain_idx
-
-			rts
-			
-.hang			jmp	.hang	;; for now (TODO: implement brk dump)
-		
-			;; handle a command
-.do_command		cmp	#SOUND_CMD_REPEAT
-			bne	.hang
-			ldy	#0
-			beq	.repeat
-.done			rts
-
 	;; Note pitches
 sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 		dw	$059d, $054d, $0500, $04b8, $0475, $0435
@@ -249,4 +275,9 @@ sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 		dw	$002c, $0029, $0027, $0025, $0023, $0021
 		dw	$001f, $001d, $001b, $001a, $0018, $0017
 		dw	$0015, $0014, $0013, $0012, $0011, $0010
+
+			code
+sound_advance		SOUND_CHANNEL_ADVANCE 0
+			SOUND_CHANNEL_ADVANCE 1
+			rts
 

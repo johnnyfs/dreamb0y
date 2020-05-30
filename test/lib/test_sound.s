@@ -69,8 +69,7 @@ write_sound_zp	ldy	#0
 
 		rts
 
-include	lib/sound.s
-
+;; Include this before the code so code length changes don't break the test
 test_theme1	dw	test_instr1, test_instr2, test_instr3, test_instr4
 		dw	test_chain1, test_chain2, test_chain3, test_chain4 
 test_theme2	dw	test_instr4, test_instr2, test_instr1, test_instr3
@@ -93,6 +92,9 @@ test_chain1	dw	$00
 test_chain2	dw	$00
 test_chain3	dw	$00
 test_chain4	dw	$00
+
+include	lib/sound.s
+
 
 *=$fffa
     dw  $0000
