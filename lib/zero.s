@@ -228,6 +228,7 @@ sound_instr_dut_len_vol	ds	1	;; duty + initial volume before attack applied
 sound_instr_sweep	ds	1	;; copied directly to sweep register
 sound_instr_len_load	ds	1	;; will be or'ed with high bits of period
 sound_instr_env		ds	1	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
+sound_instr_transpose	ds	1	;; amount to add to pitch
 SOUND_INSTR_SIZE=*
 
 ; Triangle wave instrument settings
@@ -240,7 +241,7 @@ sound_instr_tri_unused2	ds	1
 ; Noise channel instrument settings
 *=0
 sound_instr_noi_len_vol	ds	1
-sound_instr_noi_unused	ds	1
+sound_instr_noi_mode	ds	1
 sound_instr_noi_lenl	ds	1
 sound_instr_noi_env	ds	1
 

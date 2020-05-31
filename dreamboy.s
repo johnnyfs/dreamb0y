@@ -789,8 +789,8 @@ include res/status_bar_indeces.tbl.s
 ;; Music themes {{{
 
 test_theme=*
-	dw	test_instr1, test_instr2, 0, 0
-	dw	test_chain1, test_chain2, 0, 0
+	dw	test_instr1, test_instr2, test_instr3, test_instr4
+	dw	test_chain1, test_chain2, test_chain3, test_chain4
 
 test_chain1=*
 	db	E3, QN, B4, QN, Fs3, QN, E3, QN
@@ -803,17 +803,43 @@ test_chain2=*
 
 	db	SOUND_CMD_REPEAT
 
+test_chain3=*
+	db	E3, WN, B3, WN, SOUND_CMD_REPEAT
+
+test_chain4=*
+	db 	9, SN, 11, SN, 9, SN, 11, SN
+	db 	9, SN, 11, SN, 9, SN, 11, SN
+	db 	10, SN, 11, SN, 10, SN, 11, SN
+	db 	10, SN, 11, SN, 10, SN, 11, SN
+	db	SOUND_CMD_REPEAT
+
 test_instr1=*
-	db	%11111111 ; duty 12.5, software volume (TODO: 0 volume)
+	db	%10110111 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	%00000000 ; no length
 	db	%11011111 ; for now...
+	db	0
 
 test_instr2=*
-	db	%11111111 ; duty 12.5, software volume (TODO: 0 volume)
+	db	%01110111 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	%00000000 ; no length
 	db	%11011111 ; for now...
+	db	0
+
+test_instr3=*
+	db	%10001111
+	db	%00000000 ; ignored
+	db	%11111000
+	db	%00000000 ; ignored
+	db	12
+
+test_instr4=*
+	db	%00110011
+	db	%00000000 ; mode
+	db	%00000000 ; length
+	db	%00000000
+	db	0	  ; ignored
 
 ;; }}}
 

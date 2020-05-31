@@ -146,7 +146,11 @@ SOUND_CHANNEL_ADVANCE	MACRO
 			bmi	.do_command_\1
 
 			;; Start the note
-			asl			; index * 2 = offset into table
+			IF \1 < 3	; noise channel period is copied straight
+			clc
+			adc	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_transpose
+			asl	; tbl offset = (index + transpose) * 2 byte ptr with
+			ENDC
 			tax
 
 			;; Set the duty/volume register (TODO: impl envelope for sq/noise)
@@ -154,18 +158,28 @@ SOUND_CHANNEL_ADVANCE	MACRO
 			sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH
 
 			;; Set the sweep register
-			;; TODO: nest a macro that only bothers for sq1/2?
-			;lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_sweep
-			;sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 1
+			;; TODO: why does this mute channel 2?
+			;IF \1 < 2
+				;lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_sweep
+				;sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 1
+			;ENDC
 
 			;; Set the pitch
-			lda	sound_pitches, x	; load low byte of pitch
-			sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 2
-			inx
-			lda	sound_pitches, x	; load high byte
-			;; Mix in length load (TODO: do we want this?)
-			ora	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_len_load
-			sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 3
+			IF \1 < 3 ; sq1/2 + triangle: look up the note value
+				lda	sound_pitches, x	; load low byte of pitch
+				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 2
+				inx
+				lda	sound_pitches, x	; load high byte
+				;; Mix in length load (TODO: do we want this?)
+				ora	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_len_load
+				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 3
+			ELSE ; noise channel: no lookup, just copy the period in
+				txa
+				ora	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_noi_mode
+				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 2
+				lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_len_load
+				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 3
+			ENDC
 
 			;; Set the duration
 			iny
@@ -278,6 +292,8 @@ sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 
 			code
 sound_advance		SOUND_CHANNEL_ADVANCE 0
-			SOUND_CHANNEL_ADVANCE 1
+			SOUND_CHANNEL_ADVANCE 1		
+			SOUND_CHANNEL_ADVANCE 2		
+			SOUND_CHANNEL_ADVANCE 3
 			rts
 
