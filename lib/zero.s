@@ -195,12 +195,12 @@ DIR_NW=7
 
 ;; Engine-level values
 snd_theme	ds	2	; ptr to current playing theme
-snd_chains=*
-snd_chain_sq1	ds	2	; ptr to current chain for first square wave channel
-snd_chain_sq2	ds	2	; ptr to current chain for second square wave channel
-snd_chain_tri	ds	2	; ptr to current chain for triangle wave channel
-snd_chain_noi	ds	2	; ptr to current chain for noise channel
-SND_CHAINS_SIZE=*-snd_chains
+snd_chain_ptrs=*
+snd_theme_sq1	ds	2	; ptr to current chain for first square wave channel
+snd_theme_sq2	ds	2	; ptr to current chain for second square wave channel
+snd_theme_tri	ds	2	; ptr to current chain for triangle wave channel
+snd_theme_noi	ds	2	; ptr to current chain for noise channel
+SND_CHAIN_PTRS_SIZE=*-snd_chain_ptrs
 snd_theme_idx	ds	1	; offset into current theme
 snd_theme_vol	ds	1	; master volume bitmask (for fadeout/in)
 
