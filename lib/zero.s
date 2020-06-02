@@ -193,6 +193,8 @@ DIR_NW=7
 ;;;;;;;;;;;;;;;;;
 ;; Sound module
 
+SND_DATA_START=*
+
 ;; Engine-level values
 snd_theme	ds	2	; ptr to current playing theme
 snd_chain_ptrs=*
@@ -236,3 +238,5 @@ snd_instr_noi_mode=snd_instr_sweep
 snd_chain_idx		ds	1			;; offset in channel's current chain
 snd_chain_wait		ds	1			;; duration to wait until next note/cmd
 SND_CHAIN_SIZE=*
+
+SND_DATA_SIZE=*-SND_DATA_START

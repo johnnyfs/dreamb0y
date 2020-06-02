@@ -15,53 +15,53 @@ reset	lda	#$ff	; fill zero page with $ff so 0-writes stand out
 	iny
 	bne	.mark_z
 	lda	#test_theme1 & $ff
-	sta	sound_theme
+	sta	snd_theme
 	lda	#test_theme1 >> 8
-	sta	sound_theme + 1
-	jsr	sound_start_theme
-	jsr	write_sound_zp
+	sta	snd_theme + 1
+	jsr	snd_start_theme
+	jsr	write_snd_zp
 
 	lda	#test_theme2 & $ff
-	sta	sound_theme
+	sta	snd_theme
 	lda	#test_theme2 >> 8
-	sta	sound_theme + 1
-	jsr	sound_start_theme
-	jsr	write_sound_zp
+	sta	snd_theme + 1
+	jsr	snd_start_theme
+	jsr	write_snd_zp
 
 	lda	#test_theme3 & $ff
-	sta	sound_theme
+	sta	snd_theme
 	lda	#test_theme3 >> 8
-	sta	sound_theme + 1
-	jsr	sound_start_theme
-	jsr	write_sound_zp
+	sta	snd_theme + 1
+	jsr	snd_start_theme
+	jsr	write_snd_zp
 
 	lda	#test_theme4 & $ff
-	sta	sound_theme
+	sta	snd_theme
 	lda	#test_theme4 >> 8
-	sta	sound_theme + 1
-	jsr	sound_start_theme
-	jsr	write_sound_zp
+	sta	snd_theme + 1
+	jsr	snd_start_theme
+	jsr	write_snd_zp
 
 	lda	#test_theme5 & $ff
-	sta	sound_theme
+	sta	snd_theme
 	lda	#test_theme5 >> 8
-	sta	sound_theme + 1
-	jsr	sound_start_theme
-	jsr	write_sound_zp
+	sta	snd_theme + 1
+	jsr	snd_start_theme
+	jsr	write_snd_zp
 
 	lda	#test_theme6 & $ff
-	sta	sound_theme
+	sta	snd_theme
 	lda	#test_theme6 >> 8
-	sta	sound_theme + 1
-	jsr	sound_start_theme
-	jsr	write_sound_zp
+	sta	snd_theme + 1
+	jsr	snd_start_theme
+	jsr	write_snd_zp
 
 	jmp	EXIT
 
 	code
-write_sound_zp	ldy	#0
-		ldx	#SOUND_DATA_SIZE + 12 ; + extra bytes to align xxd
-.next		lda	sound_theme, y
+write_snd_zp	ldy	#0
+		ldx	#SND_DATA_SIZE + 12 ; + extra bytes to align xxd
+.next		lda	snd_theme, y
 		sta	STDIO
 		iny
 		dex
