@@ -213,40 +213,26 @@ snd_noi_instr	ds	SND_INSTR_SIZE
 SND_INSTRS_END=*
 
 ;; Per-channel values
-snd_channels=*
-snd_sq1	ds	SND_CHANNEL_SIZE
-snd_sq2	ds	SND_CHANNEL_SIZE
-snd_tri	ds	SND_CHANNEL_SIZE
-snd_noi	ds	SND_CHANNEL_SIZE
-SND_CHANNELS_END=*
-
-SND_DATA_SIZE=*-snd_theme
+snd_chains=*
+snd_chain_sq1	ds	SND_CHAIN_SIZE
+snd_chain_sq2	ds	SND_CHAIN_SIZE
+snd_chain_tri	ds	SND_CHAIN_SIZE
+snd_chain_noi	ds	SND_CHAIN_SIZE
+SND_CHAINS_END=*
 
 ; Square wave instrument settings
 *=0
 snd_instr_dut_len_vol	ds	1	;; duty + initial volume before attack applied
-snd_instr_sweep	ds	1	;; copied directly to sweep register
+snd_instr_sweep		ds	1	;; copied directly to sweep register
 snd_instr_len_load	ds	1	;; will be or'ed with high bits of period
 snd_instr_env		ds	1	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
 snd_instr_transpose	ds	1	;; amount to add to pitch
 SND_INSTR_SIZE=*
 
-; Triangle wave instrument settings
-*=0
-snd_instr_tri_len_rel	ds	1
-snd_instr_tri_unused	ds	1
-snd_instr_tri_lenl_hi	ds	1
-snd_instr_tri_unused2	ds	1
-
-; Noise channel instrument settings
-*=0
-snd_instr_noi_len_vol	ds	1
-snd_instr_noi_mode	ds	1
-snd_instr_noi_lenl	ds	1
-snd_instr_noi_env	ds	1
+snd_instr_noi_mode=snd_instr_sweep
 
 ; Repeating per-channel values
 *=0
 snd_chain_idx		ds	1			;; offset in channel's current chain
-snd_chain_wait	ds	1			;; duration to wait until next note/cmd
-SND_CHANNEL_SIZE=*
+snd_chain_wait		ds	1			;; duration to wait until next note/cmd
+SND_CHAIN_SIZE=*

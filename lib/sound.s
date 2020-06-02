@@ -132,15 +132,15 @@ SND_CMD_REPEAT	equ	(SND_CMD_FLAG|0)	; return to beginning of chain
 ;; Advance the indexed sound channel
 ;; MACRO \1:channel
 ;;   channel: the index 0-3 of sq1, sq2, tri, and noi
-SND_CHANNEL_ADVANCE	MACRO
+SND_CHAIN_ADVANCE	MACRO
 			;; Do nothing if there is no chain for this channel
 			lda	snd_chain_ptrs + 2 * \1
 			beq	.done_\1
 			;; Count back duration to (-1)
-			dec	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_wait
+			dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
 			bpl	.done_\1
 			;; Advance the index into the channel
-			ldy	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_idx
+			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
 			;; High bid set => process command; otherwise => play note
 .repeat_\1		lda	(snd_chain_ptrs + 2 * \1), y
 			bmi	.do_command_\1
@@ -185,12 +185,12 @@ SND_CHANNEL_ADVANCE	MACRO
 			iny
 			beq	.hang_\1
 			lda	(snd_chain_ptrs + 2 * \1), y
-			sta	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_wait
+			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
 
 			;; Advance to next note/command
 			iny
 			beq	.hang_\1
-			sty	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_idx
+			sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
 			bne	.done_\1
 
 .hang_\1		jmp	.hang_\1	; for now just crash out
@@ -244,8 +244,8 @@ snd_start_theme 	lda	#snd_noi_instr & $ff
 			;; Reset the channel vars
 .instr_done 		iny			; y was -1, so is now 0
 			tya
-			ldy	#SND_CHANNEL_SIZE * 4 - 1
-.clear_channel		sta	snd_channels, y	; clear channel
+			ldy	#SND_CHAIN_SIZE * 4 - 1
+.clear_channel		sta	snd_chains, y	; clear channel
 			dey
 			bpl	.clear_channel
 
@@ -291,9 +291,9 @@ snd_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 		dw	$0015, $0014, $0013, $0012, $0011, $0010
 
 			code
-snd_advance		SND_CHANNEL_ADVANCE 0
-			SND_CHANNEL_ADVANCE 1		
-			SND_CHANNEL_ADVANCE 2		
-			SND_CHANNEL_ADVANCE 3
+snd_advance		SND_CHAIN_ADVANCE 0
+			SND_CHAIN_ADVANCE 1		
+			SND_CHAIN_ADVANCE 2		
+			SND_CHAIN_ADVANCE 3
 			rts
 
