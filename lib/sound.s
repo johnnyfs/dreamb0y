@@ -3,8 +3,8 @@
 ;;; sound effects as needed.
 ;;;
 
-SOUND_CH_REGS=$4000 ;; PPU channel registers start at $4000
-SOUND_REGS_PER_CH=4 ;; 4 registers per channel
+SND_CH_REGS=$4000 ;; PPU channel registers start at $4000
+SND_REGS_PER_CH=4 ;; 4 registers per channel
 
 	;; Note pitch indeces
 A1	equ	0
@@ -126,77 +126,77 @@ YN	equ	0	; thirty-second note
        ;; TBD
 
 ; Commands (mutually exclusive with notes, indicated by high bit
-SOUND_CMD_FLAG		equ	%10000000
-SOUND_CMD_REPEAT	equ	(SOUND_CMD_FLAG|0)	; return to beginning of chain
+SND_CMD_FLAG		equ	%10000000
+SND_CMD_REPEAT	equ	(SND_CMD_FLAG|0)	; return to beginning of chain
 
 ;; Advance the indexed sound channel
 ;; MACRO \1:channel
 ;;   channel: the index 0-3 of sq1, sq2, tri, and noi
-SOUND_CHANNEL_ADVANCE	MACRO
+SND_CHANNEL_ADVANCE	MACRO
 			;; Do nothing if there is no chain for this channel
-			lda	sound_chains + 2 * \1
+			lda	snd_chains + 2 * \1
 			beq	.done_\1
 			;; Count back duration to (-1)
-			dec	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_wait
+			dec	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_wait
 			bpl	.done_\1
 			;; Advance the index into the channel
-			ldy	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_idx
+			ldy	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_idx
 			;; High bid set => process command; otherwise => play note
-.repeat_\1		lda	(sound_chains + 2 * \1), y
+.repeat_\1		lda	(snd_chains + 2 * \1), y
 			bmi	.do_command_\1
 
 			;; Start the note
 			IF \1 < 3	; noise channel period is copied straight
 			clc
-			adc	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_transpose
+			adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
 			asl	; tbl offset = (index + transpose) * 2 byte ptr with
 			ENDC
 			tax
 
 			;; Set the duty/volume register (TODO: impl envelope for sq/noise)
-			lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_dut_len_vol
-			sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH
+			lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
 
 			;; Set the sweep register
 			;; TODO: why does this mute channel 2?
 			;IF \1 < 2
-				;lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_sweep
-				;sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 1
+				;lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_sweep
+				;sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 1
 			;ENDC
 
 			;; Set the pitch
 			IF \1 < 3 ; sq1/2 + triangle: look up the note value
-				lda	sound_pitches, x	; load low byte of pitch
-				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 2
+				lda	snd_pitches, x	; load low byte of pitch
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
 				inx
-				lda	sound_pitches, x	; load high byte
+				lda	snd_pitches, x	; load high byte
 				;; Mix in length load (TODO: do we want this?)
-				ora	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_len_load
-				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 3
+				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_len_load
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
 			ELSE ; noise channel: no lookup, just copy the period in
 				txa
-				ora	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_noi_mode
-				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 2
-				lda	sound_instrs + SOUND_INSTR_SIZE * \1 + sound_instr_len_load
-				sta	SOUND_CH_REGS + \1 * SOUND_REGS_PER_CH + 3
+				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_noi_mode
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
+				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_len_load
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
 			ENDC
 
 			;; Set the duration
 			iny
 			beq	.hang_\1
-			lda	(sound_chains + 2 * \1), y
-			sta	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_wait
+			lda	(snd_chains + 2 * \1), y
+			sta	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_wait
 
 			;; Advance to next note/command
 			iny
 			beq	.hang_\1
-			sty	sound_channels + SOUND_CHANNEL_SIZE * \1 + sound_chain_idx
+			sty	snd_channels + SND_CHANNEL_SIZE * \1 + snd_chain_idx
 			bne	.done_\1
 
 .hang_\1		jmp	.hang_\1	; for now just crash out
 
 			;; Handle a command
-.do_command_\1		cmp	#SOUND_CMD_REPEAT
+.do_command_\1		cmp	#SND_CMD_REPEAT
 			bne	.hang_\1	; crash on unrecognized commands
 			ldy	#0
 			beq	.repeat_\1
@@ -205,22 +205,22 @@ SOUND_CHANNEL_ADVANCE	MACRO
 
 ; Load a theme and prepare the engine to play it
 			code
-sound_start_theme 	lda	#sound_noi_instr & $ff
+snd_start_theme 	lda	#snd_noi_instr & $ff
 			sta	dst	; start writing at last instr
-			lda	#sound_noi_instr >> 8
+			lda	#snd_noi_instr >> 8
 			sta	dst + 1
 
 			ldy	#7	; 4 channels * 2 bytes per instr ptr - 1
-.next_instr_ptr		lda	(sound_theme), y	; ptr for instr1
+.next_instr_ptr		lda	(snd_theme), y	; ptr for instr1
 			beq	.null_instr
 			sta	src + 1
 			dey
-			lda	(sound_theme), y
+			lda	(snd_theme), y
 			sta	src	; start reading w/ pointer to last instrument
 
 			tya		; save our index into *theme*
 			tax
-			ldy	#SOUND_INSTR_SIZE - 1	; last byte of instrument data
+			ldy	#SND_INSTR_SIZE - 1	; last byte of instrument data
 
 .sync_instr		lda	(src), y
 			sta	(dst), y
@@ -233,7 +233,7 @@ sound_start_theme 	lda	#sound_noi_instr & $ff
 			bmi	.instr_done	; dst ptr
 			tya			; <- save the new y!
 
-			ldy	#SOUND_INSTR_SIZE
+			ldy	#SND_INSTR_SIZE
 .adv_instr_dst		dec	dst		; dst -= instrument size
 			dey
 			bne	.adv_instr_dst
@@ -244,38 +244,38 @@ sound_start_theme 	lda	#sound_noi_instr & $ff
 			;; Reset the channel vars
 .instr_done 		iny			; y was -1, so is now 0
 			tya
-			ldy	#SOUND_CHANNEL_SIZE * 4 - 1
-.clear_channel		sta	sound_channels, y	; clear channel
+			ldy	#SND_CHANNEL_SIZE * 4 - 1
+.clear_channel		sta	snd_channels, y	; clear channel
 			dey
 			bpl	.clear_channel
 
 			;; Set the chain ptrs
 			ldy	#8		; right after the instr ptrs
-			ldx	#SOUND_CHAINS_SIZE
-.set_chain_ptrs		lda	(sound_theme), y
-			sta	sound_chains - 8, y 
+			ldx	#SND_CHAINS_SIZE
+.set_chain_ptrs		lda	(snd_theme), y
+			sta	snd_chains - 8, y 
 			iny
 			dex
 			bne	.set_chain_ptrs
 
 			txa			; x must be 0 here
-			sta	sound_theme_idx	; finally, 0 out   <- clears scratch
-			sta	sound_theme_vol ; the global vars
+			sta	snd_theme_idx	; finally, 0 out   <- clears scratch
+			sta	snd_theme_vol ; the global vars
 
 			rts
 
 			;; Handle NULL instruments by 0ing out the settings
 .null_instr		dey			; we skipped dey to br here	
-			sty	sound_theme_idx	; use this as scratch (we'll clear it later)
-			ldy	#SOUND_INSTR_SIZE - 1
+			sty	snd_theme_idx	; use this as scratch (we'll clear it later)
+			ldy	#SND_INSTR_SIZE - 1
 .next_null		sta	(dst), y	; A must == 0 to be here...
 			dey
 			bpl	.next_null
-			ldx	sound_theme_idx	; but restore it into X
+			ldx	snd_theme_idx	; but restore it into X
 			bpl	.null_rejoin
 
 	;; Note pitches
-sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
+snd_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 		dw	$059d, $054d, $0500, $04b8, $0475, $0435
 		dw	$03f8, $03bf, $0389, $0356, $0326, $02f9
 		dw	$02ce, $02a6, $027f, $025c, $023a, $021a
@@ -291,9 +291,9 @@ sound_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 		dw	$0015, $0014, $0013, $0012, $0011, $0010
 
 			code
-sound_advance		SOUND_CHANNEL_ADVANCE 0
-			SOUND_CHANNEL_ADVANCE 1		
-			SOUND_CHANNEL_ADVANCE 2		
-			SOUND_CHANNEL_ADVANCE 3
+snd_advance		SND_CHANNEL_ADVANCE 0
+			SND_CHANNEL_ADVANCE 1		
+			SND_CHANNEL_ADVANCE 2		
+			SND_CHANNEL_ADVANCE 3
 			rts
 

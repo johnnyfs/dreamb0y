@@ -194,59 +194,59 @@ DIR_NW=7
 ;; Sound module
 
 ;; Engine-level values
-sound_theme	ds	2	; ptr to current playing theme
-sound_chains=*
-sound_chain_sq1	ds	2	; ptr to current chain for first square wave channel
-sound_chain_sq2	ds	2	; ptr to current chain for second square wave channel
-sound_chain_tri	ds	2	; ptr to current chain for triangle wave channel
-sound_chain_noi	ds	2	; ptr to current chain for noise channel
-SOUND_CHAINS_SIZE=*-sound_chains
-sound_theme_idx	ds	1	; offset into current theme
-sound_theme_vol	ds	1	; master volume bitmask (for fadeout/in)
+snd_theme	ds	2	; ptr to current playing theme
+snd_chains=*
+snd_chain_sq1	ds	2	; ptr to current chain for first square wave channel
+snd_chain_sq2	ds	2	; ptr to current chain for second square wave channel
+snd_chain_tri	ds	2	; ptr to current chain for triangle wave channel
+snd_chain_noi	ds	2	; ptr to current chain for noise channel
+SND_CHAINS_SIZE=*-snd_chains
+snd_theme_idx	ds	1	; offset into current theme
+snd_theme_vol	ds	1	; master volume bitmask (for fadeout/in)
 
 ;; Per-channel instrument settings
-sound_instrs=*
-sound_sq1_instr	ds	SOUND_INSTR_SIZE
-sound_sq2_instr	ds	SOUND_INSTR_SIZE
-sound_tri_instr	ds	SOUND_INSTR_SIZE
-sound_noi_instr	ds	SOUND_INSTR_SIZE
-SOUND_INSTRS_END=*
+snd_instrs=*
+snd_sq1_instr	ds	SND_INSTR_SIZE
+snd_sq2_instr	ds	SND_INSTR_SIZE
+snd_tri_instr	ds	SND_INSTR_SIZE
+snd_noi_instr	ds	SND_INSTR_SIZE
+SND_INSTRS_END=*
 
 ;; Per-channel values
-sound_channels=*
-sound_sq1	ds	SOUND_CHANNEL_SIZE
-sound_sq2	ds	SOUND_CHANNEL_SIZE
-sound_tri	ds	SOUND_CHANNEL_SIZE
-sound_noi	ds	SOUND_CHANNEL_SIZE
-SOUND_CHANNELS_END=*
+snd_channels=*
+snd_sq1	ds	SND_CHANNEL_SIZE
+snd_sq2	ds	SND_CHANNEL_SIZE
+snd_tri	ds	SND_CHANNEL_SIZE
+snd_noi	ds	SND_CHANNEL_SIZE
+SND_CHANNELS_END=*
 
-SOUND_DATA_SIZE=*-sound_theme
+SND_DATA_SIZE=*-snd_theme
 
 ; Square wave instrument settings
 *=0
-sound_instr_dut_len_vol	ds	1	;; duty + initial volume before attack applied
-sound_instr_sweep	ds	1	;; copied directly to sweep register
-sound_instr_len_load	ds	1	;; will be or'ed with high bits of period
-sound_instr_env		ds	1	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
-sound_instr_transpose	ds	1	;; amount to add to pitch
-SOUND_INSTR_SIZE=*
+snd_instr_dut_len_vol	ds	1	;; duty + initial volume before attack applied
+snd_instr_sweep	ds	1	;; copied directly to sweep register
+snd_instr_len_load	ds	1	;; will be or'ed with high bits of period
+snd_instr_env		ds	1	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
+snd_instr_transpose	ds	1	;; amount to add to pitch
+SND_INSTR_SIZE=*
 
 ; Triangle wave instrument settings
 *=0
-sound_instr_tri_len_rel	ds	1
-sound_instr_tri_unused	ds	1
-sound_instr_tri_lenl_hi	ds	1
-sound_instr_tri_unused2	ds	1
+snd_instr_tri_len_rel	ds	1
+snd_instr_tri_unused	ds	1
+snd_instr_tri_lenl_hi	ds	1
+snd_instr_tri_unused2	ds	1
 
 ; Noise channel instrument settings
 *=0
-sound_instr_noi_len_vol	ds	1
-sound_instr_noi_mode	ds	1
-sound_instr_noi_lenl	ds	1
-sound_instr_noi_env	ds	1
+snd_instr_noi_len_vol	ds	1
+snd_instr_noi_mode	ds	1
+snd_instr_noi_lenl	ds	1
+snd_instr_noi_env	ds	1
 
 ; Repeating per-channel values
 *=0
-sound_chain_idx		ds	1			;; offset in channel's current chain
-sound_chain_wait	ds	1			;; duration to wait until next note/cmd
-SOUND_CHANNEL_SIZE=*
+snd_chain_idx		ds	1			;; offset in channel's current chain
+snd_chain_wait	ds	1			;; duration to wait until next note/cmd
+SND_CHANNEL_SIZE=*

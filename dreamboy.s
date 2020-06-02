@@ -157,10 +157,10 @@ reset	sei
 
 	;; choose the starting sound theme
 	lda	#test_theme & $ff	
-	sta	sound_theme
+	sta	snd_theme
 	lda	#test_theme >> 8
-	sta	sound_theme + 1
-	jsr	sound_start_theme
+	sta	snd_theme + 1
+	jsr	snd_start_theme
 
 	;; turn sound channels on
 	lda	#%00000000
@@ -288,7 +288,7 @@ nmi	pha
         sta     $2005		    ;; scroll is always init state for status bar
 
 	;; Advance sound subsystem
-	jsr	sound_advance
+	jsr	snd_advance
 
 	;; Increment the frame counter
 .done	inc	frames
@@ -796,22 +796,22 @@ test_chain1=*
 	db	E3, QN, B4, QN, Fs3, QN, E3, QN
 	db	E3, QN, Gs3, QN, B4, QN, E3, QN
 
-	db	SOUND_CMD_REPEAT
+	db	SND_CMD_REPEAT
 test_chain2=*
 	db	Gs3, QN, Ds4, QN, Cs4, QN, Gs3, QN
 	db	B4, QN, Ds4, EN, Ds4, EN, Fs3, QN, B4, QN
 
-	db	SOUND_CMD_REPEAT
+	db	SND_CMD_REPEAT
 
 test_chain3=*
-	db	E3, WN, B3, WN, SOUND_CMD_REPEAT
+	db	E3, WN, B3, WN, SND_CMD_REPEAT
 
 test_chain4=*
 	db 	9, SN, 11, SN, 9, SN, 11, SN
 	db 	9, SN, 11, SN, 9, SN, 11, SN
 	db 	10, SN, 11, SN, 10, SN, 11, SN
 	db 	10, SN, 11, SN, 10, SN, 11, SN
-	db	SOUND_CMD_REPEAT
+	db	SND_CMD_REPEAT
 
 test_instr1=*
 	db	%10110111 ; duty 12.5, software volume (TODO: 0 volume)
