@@ -3,6 +3,12 @@
 ;;; sound effects as needed.
 ;;;
 
+; We need to force this, b/c the assembler won't assume 1-byte for zero page
+_SND_INSTR_SIZE=6
+IF SND_INSTR_SIZE != 6
+	FAIL "Mismatch between library and zero page instrument size"
+ENDC
+
 SND_CH_REGS=$4000 ;; PPU channel registers start at $4000
 SND_REGS_PER_CH=4 ;; 4 registers per channel
 
@@ -139,7 +145,11 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; Count back duration to (-1)
 			dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
-			bpl	.done_\1
+			IF \1 == 2
+				bpl	.done_\1
+			ELSE
+				bpl	.env_maybe_\1
+			ENDC
 
 			;; Advance the index into the channel
 			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
@@ -156,14 +166,28 @@ SND_CHAIN_ADVANCE	MACRO
 			ENDC
 			tax
 
-			;; Set the duty/volume register (TODO: impl envelope for sq/noise)
-			lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol
+			;; Set the duty/volume register
+			IF \1 == 2 ; Triangle: no volume control, so just copy the instr value
+				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol
+			ELSE       ; Sq/Noi: if not null, load the first envelope value
+				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
+				beq	.no_env_\1
+				sty	snd_theme_tmp ; save the chain index
+				ldy	#0
+				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr), y
+				iny
+				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
+				ldy	snd_theme_tmp ; restore the chain index
+
+				;: On null ptr, a=0, so this is equivalent to lda
+.no_env_\1			ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol				
+			ENDC
 			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
 
 			;; Set the sweep register
 			;; TODO: why does this mute channel 2?
 			;IF \1 < 2
-				;lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_sweep
+				;lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_sq_sweep
 				;sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 1
 			;ENDC
 
@@ -197,6 +221,26 @@ SND_CHAIN_ADVANCE	MACRO
 			bne	.done_\1
 
 .hang_\1		jmp	.hang_\1	; for now just crash out
+
+			;; For non-triangle channels, advance the volume envelope
+			IF \1 != 2
+				;; Advance the volume envelope as applicable
+.env_maybe_\1			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
+				beq	.done_\1 ; index wasn't advanced at start => null ptr
+				tay
+				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr), y
+				bmi	.decay_maybe_\1 ; (-1) == end of envelope
+				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
+.adv_to_decay_\1		iny
+				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
+				bne	.done_\1
+				beq	.hang_\1 ; lock up if we roll over on an envelope
+.decay_maybe_\1			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
+				cmp	#15	 ; start decay at exactly this frame
+				bne	.done_\1
+				beq	.adv_to_decay_\1 ; skip the (-1) marker exactly once
+			ENDC
 
 			;; Handle a command
 .do_command_\1		cmp	#SND_CMD_REPEAT
@@ -263,7 +307,7 @@ snd_start_theme 	lda	#snd_instr_noi & $ff
 
 			txa			; x must be 0 here
 			sta	snd_theme_idx	; finally, 0 out   <- clears scratch
-			sta	snd_theme_vol ; the global vars
+			sta	snd_theme_tmp   ; the global vars
 
 			rts
 

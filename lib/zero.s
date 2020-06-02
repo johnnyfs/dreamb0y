@@ -207,7 +207,7 @@ snd_theme_tri	ds	2	; ptr to current chain for triangle wave channel
 snd_theme_noi	ds	2	; ptr to current chain for noise channel
 SND_CHAIN_PTRS_SIZE=*-snd_chain_ptrs
 snd_theme_idx	ds	1	; offset into current theme
-snd_theme_vol	ds	1	; master volume bitmask (for fadeout/in)
+snd_theme_tmp	ds	1	; sound-subsystem-global tmp variable
 
 ;; Per-channel instrument settings
 snd_instrs=*
@@ -225,21 +225,22 @@ snd_chain_tri	ds	SND_CHAIN_SIZE
 snd_chain_noi	ds	SND_CHAIN_SIZE
 SND_CHAINS_END=*
 
+SND_DATA_SIZE=*-SND_DATA_START
+
 ; Square wave instrument settings
 *=0
 snd_instr_dut_len_vol	ds	1	;; duty + initial volume before attack applied
-snd_instr_sweep		ds	1	;; copied directly to sweep register
+snd_instr_sq_sweep	ds	1	;; copied directly to sweep register
 snd_instr_len_load	ds	1	;; will be or'ed with high bits of period
 snd_instr_transpose	ds	1	;; amount to add to pitch
 snd_instr_env_ptr	ds	2	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
 SND_INSTR_SIZE=*
 
-snd_instr_noi_mode=snd_instr_sweep
+snd_instr_noi_mode=snd_instr_sq_sweep
 
 ; Repeating per-channel values
 *=0
-snd_chain_idx		ds	1			;; offset in channel's current chain
-snd_chain_wait		ds	1			;; duration to wait until next note/cmd
+snd_chain_idx		ds	1	; offset in channel's current chain
+snd_chain_wait		ds	1	; duration to wait until next note/cmd
+snd_chain_env_idx	ds	1	; offset in envelope advance, if any
 SND_CHAIN_SIZE=*
-
-SND_DATA_SIZE=*-SND_DATA_START

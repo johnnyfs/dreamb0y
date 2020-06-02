@@ -789,8 +789,8 @@ include res/status_bar_indeces.tbl.s
 ;; Music themes {{{
 
 test_theme=*
-	dw	test_instr1, test_instr2, test_instr3, test_instr4
-	dw	test_chain1, test_chain2, test_chain3, test_chain4
+	dw	test_instr1, 0, 0, 0
+	dw	test_chain1, 0, 0, 0
 
 test_chain1=*
 	db	E3, QN, B4, QN, Fs3, QN, E3, QN
@@ -814,18 +814,22 @@ test_chain4=*
 	db	SND_CMD_REPEAT
 
 test_instr1=*
-	db	%10110111 ; duty 12.5, software volume (TODO: 0 volume)
+	db	%10110000 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	%00000000 ; no length
 	db	0
-	dw	NULL
+	dw	test_env1
+
+test_env1=*
+	db	1, 2, 2, 2, 3, 4, 3, 4, 6, 8, 4, 10, 6, 14, 15, 12, 10, 12, 10, -1
+	db	8, 4, 6, 2, 4, 2, 4, 2, -1
 
 test_instr2=*
 	db	%01110111 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	%00000000 ; no length
 	db	0
-	dw	NULL
+	dw	test_env1
 
 test_instr3=*
 	db	%10001111
