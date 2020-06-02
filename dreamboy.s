@@ -817,29 +817,29 @@ test_instr1=*
 	db	%10110111 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	%00000000 ; no length
-	db	%11011111 ; for now...
 	db	0
+	dw	NULL
 
 test_instr2=*
 	db	%01110111 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	%00000000 ; no length
-	db	%11011111 ; for now...
 	db	0
+	dw	NULL
 
 test_instr3=*
 	db	%10001111
 	db	%00000000 ; ignored
 	db	%11111000
-	db	%00000000 ; ignored
 	db	12
+	dw	NULL
 
 test_instr4=*
 	db	%00110011
 	db	%00000000 ; mode
 	db	%00000000 ; length
-	db	%00000000
 	db	0	  ; ignored
+	dw	NULL
 
 ;; }}}
 

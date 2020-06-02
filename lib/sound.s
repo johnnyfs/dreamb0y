@@ -126,7 +126,7 @@ YN	equ	0	; thirty-second note
        ;; TBD
 
 ; Commands (mutually exclusive with notes, indicated by high bit
-SND_CMD_FLAG		equ	%10000000
+SND_CMD_FLAG	equ	%10000000
 SND_CMD_REPEAT	equ	(SND_CMD_FLAG|0)	; return to beginning of chain
 
 ;; Advance the indexed sound channel
@@ -134,22 +134,25 @@ SND_CMD_REPEAT	equ	(SND_CMD_FLAG|0)	; return to beginning of chain
 ;;   channel: the index 0-3 of sq1, sq2, tri, and noi
 SND_CHAIN_ADVANCE	MACRO
 			;; Do nothing if there is no chain for this channel
-			lda	snd_chain_ptrs + 2 * \1
+			lda	snd_chain_ptrs + 2 * \1 + 1
 			beq	.done_\1
+
 			;; Count back duration to (-1)
 			dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
 			bpl	.done_\1
+
 			;; Advance the index into the channel
 			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
+
 			;; High bid set => process command; otherwise => play note
 .repeat_\1		lda	(snd_chain_ptrs + 2 * \1), y
 			bmi	.do_command_\1
 
 			;; Start the note
 			IF \1 < 3	; noise channel period is copied straight
-			clc
-			adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
-			asl	; tbl offset = (index + transpose) * 2 byte ptr with
+				clc
+				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
+				asl	; tbl offset = (index + transpose) * 2 byte ptr with
 			ENDC
 			tax
 
@@ -205,9 +208,9 @@ SND_CHAIN_ADVANCE	MACRO
 
 ; Load a theme and prepare the engine to play it
 			code
-snd_start_theme 	lda	#snd_noi_instr & $ff
+snd_start_theme 	lda	#snd_instr_noi & $ff
 			sta	dst	; start writing at last instr
-			lda	#snd_noi_instr >> 8
+			lda	#snd_instr_noi >> 8
 			sta	dst + 1
 
 			ldy	#7	; 4 channels * 2 bytes per instr ptr - 1

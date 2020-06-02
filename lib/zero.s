@@ -1,4 +1,7 @@
 ;; Zero page
+
+NULL=0
+
 	dummy
 *=$0000
 src	ds	2		; generic address src pointer
@@ -208,10 +211,10 @@ snd_theme_vol	ds	1	; master volume bitmask (for fadeout/in)
 
 ;; Per-channel instrument settings
 snd_instrs=*
-snd_sq1_instr	ds	SND_INSTR_SIZE
-snd_sq2_instr	ds	SND_INSTR_SIZE
-snd_tri_instr	ds	SND_INSTR_SIZE
-snd_noi_instr	ds	SND_INSTR_SIZE
+snd_instr_sq1	ds	SND_INSTR_SIZE
+snd_instr_sq2	ds	SND_INSTR_SIZE
+snd_instr_tri	ds	SND_INSTR_SIZE
+snd_instr_noi	ds	SND_INSTR_SIZE
 SND_INSTRS_END=*
 
 ;; Per-channel values
@@ -227,8 +230,8 @@ SND_CHAINS_END=*
 snd_instr_dut_len_vol	ds	1	;; duty + initial volume before attack applied
 snd_instr_sweep		ds	1	;; copied directly to sweep register
 snd_instr_len_load	ds	1	;; will be or'ed with high bits of period
-snd_instr_env		ds	1	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
 snd_instr_transpose	ds	1	;; amount to add to pitch
+snd_instr_env_ptr	ds	2	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
 SND_INSTR_SIZE=*
 
 snd_instr_noi_mode=snd_instr_sweep
