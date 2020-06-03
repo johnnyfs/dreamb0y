@@ -236,8 +236,6 @@ snd_instr_transpose	ds	1	;; amount to add to pitch
 snd_instr_env_ptr	ds	2	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
 SND_INSTR_SIZE=*
 
-snd_instr_noi_mode=snd_instr_sq_sweep
-
 ; Repeating per-channel values
 *=0
 snd_chain_idx		ds	1	; offset in channel's current chain

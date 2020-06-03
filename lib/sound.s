@@ -12,6 +12,8 @@ ENDC
 SND_CH_REGS=$4000 ;; PPU channel registers start at $4000
 SND_REGS_PER_CH=4 ;; 4 registers per channel
 
+PN=%00010000 	; periodic noise mode flag
+
 	;; Note pitch indeces
 A1	equ	0
 Bb1	equ	1
@@ -200,9 +202,14 @@ SND_CHAIN_ADVANCE	MACRO
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
 			ELSE ; noise channel: no lookup, just copy the period in
 				txa
-				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_noi_mode
-				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
-				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
+				and	#PN
+				beq	.no_pmode_\1
+				txa
+				and	#%00001111	; mask off the software flag
+				ora	#%10000000	; set the hardware flag
+				tax
+.no_pmode_\1			stx	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2 ; set period+mode
+				stx	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3 ; must set?
 			ENDC
 
 			;; Set the duration
