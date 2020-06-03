@@ -168,7 +168,7 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; Set the duty/volume register
 			IF \1 == 2 ; Triangle: no volume control, so just copy the instr value
-				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol
+				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
 			ELSE       ; Sq/Noi: if not null, load the first envelope value
 				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
 				beq	.no_env_\1
@@ -180,7 +180,7 @@ SND_CHAIN_ADVANCE	MACRO
 				ldy	snd_theme_tmp ; restore the chain index
 
 				;: On null ptr, a=0, so this is equivalent to lda
-.no_env_\1			ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol				
+.no_env_\1			ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol				
 			ENDC
 			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
 
@@ -197,14 +197,11 @@ SND_CHAIN_ADVANCE	MACRO
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
 				inx
 				lda	snd_pitches, x	; load high byte
-				;; Mix in length load (TODO: do we want this?)
-				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_len_load
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
 			ELSE ; noise channel: no lookup, just copy the period in
 				txa
 				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_noi_mode
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
-				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_len_load
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
 			ENDC
 
@@ -230,14 +227,14 @@ SND_CHAIN_ADVANCE	MACRO
 				tay
 				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr), y
 				bmi	.decay_maybe_\1 ; (-1) == end of envelope
-				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_dut_len_vol
+				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
 .adv_to_decay_\1		iny
 				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
 				bne	.done_\1
 				beq	.hang_\1 ; lock up if we roll over on an envelope
 .decay_maybe_\1			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
-				cmp	#15	 ; start decay at exactly this frame
+				cmp	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
 				bne	.done_\1
 				beq	.adv_to_decay_\1 ; skip the (-1) marker exactly once
 			ENDC

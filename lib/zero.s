@@ -229,9 +229,9 @@ SND_DATA_SIZE=*-SND_DATA_START
 
 ; Square wave instrument settings
 *=0
-snd_instr_dut_len_vol	ds	1	;; duty + initial volume before attack applied
+snd_instr_duty_vol	ds	1	;; duty for sq + initial volume for sq/noi
 snd_instr_sq_sweep	ds	1	;; copied directly to sweep register
-snd_instr_len_load	ds	1	;; will be or'ed with high bits of period
+snd_instr_decay_off	ds	1	;; how far from end of note that decay starts
 snd_instr_transpose	ds	1	;; amount to add to pitch
 snd_instr_env_ptr	ds	2	;; AADDSSRR att inc/f, decay dec/f, sust len/2, rel dec/f
 SND_INSTR_SIZE=*

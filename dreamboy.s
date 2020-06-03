@@ -813,7 +813,7 @@ test_chain4=*
 test_instr1=*
 	db	%10110000 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
-	db	%00000000 ; no length
+	db	15
 	db	12
 	dw	test_env1
 
@@ -824,7 +824,7 @@ test_env1=*
 test_instr2=*
 	db	%00110000 ; duty 12.5, software volume (TODO: 0 volume)
 	db	%00001000 ; no sweep (negate on so channel isn't muted)
-	db	%00000000 ; no length
+	db	6
 	db	0
 	dw	test_env2
 
@@ -842,7 +842,7 @@ test_instr3=*
 test_instr4=*
 	db	%00110000
 	db	%00000000 ; mode
-	db	%00000000 ; length
+	db	15
 	db	0	  ; ignored
 	dw	test_env4
 
