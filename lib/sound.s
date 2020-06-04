@@ -156,9 +156,29 @@ snd_env_advance_\1	lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
 .no_env_\1		rts
 			ENDM
 
+			; Only the square and noise channels have volume envelopes
 			SND_ENV_ADVANCE 0
 			SND_ENV_ADVANCE 1
 			SND_ENV_ADVANCE 3
+
+SND_PITCH_ADVANCE	MACRO
+			lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+			beq	.no_pitch_\1
+			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
+			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
+.no_pitch_\1		clc	; a is 0 on branch, so this is equivalent to lda
+			adc	snd_pitches, x	; load low byte of pitch
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
+			inx
+			lda	snd_pitches, x	; load high byte
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
+			rts
+			ENDM
+
+			; Only the square and triangle channels support pitch modulation
+			SND_PITCH_ADVANCE 0
+			SND_PITCH_ADVANCE 1
+			SND_PITCH_ADVANCE 2
 
 ;; Advance the indexed sound channel
 ;; MACRO \1:channel
@@ -185,8 +205,28 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; Start the note
 			IF \1 < 3	; noise channel period is copied straight
+				tax
+				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+				beq	.no_pitch_mod_\1
+				sty	snd_theme_tmp ; save index
+				ldy	#0
+
+				; First byte is duration of modulation step
+				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
+				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
+				iny
+
+				; Second byte is amount of modulation
+				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
+				iny
+				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
+				ldy	snd_theme_tmp
+.no_pitch_mod_\1		sta	snd_theme_acc ; 0 if no pitch modulation
+				txa
 				clc
 				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
+				clc
+				adc	snd_theme_acc	; +0 if no pitch modulation
 				asl	; tbl offset = (index + transpose) * 2 byte ptr with
 			ENDC
 			tax
@@ -198,9 +238,9 @@ SND_CHAIN_ADVANCE	MACRO
 			ELSE       ; Sq/Noi: if not null, reset env idx and advance
 				lda	#0
 				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
-				sty	snd_theme_tmp
+				sty	snd_theme_tmp ; save y from destruction
 				jsr	snd_env_advance_\1
-				ldy	snd_theme_tmp
+				ldy	snd_theme_tmp ; restore y
 			ENDC
 
 			;; Set the pitch
@@ -308,19 +348,19 @@ snd_start_theme 	lda	#snd_instr_noi & $ff
 			bne	.set_chain_ptrs
 
 			txa			; x must be 0 here
-			sta	snd_theme_idx	; finally, 0 out   <- clears scratch
+			sta	snd_theme_acc	; finally, 0 out   <- clears scratch
 			sta	snd_theme_tmp   ; the global vars
 
 			rts
 
 			;; Handle NULL instruments by 0ing out the settings
 .null_instr		dey			; we skipped dey to br here	
-			sty	snd_theme_idx	; use this as scratch (we'll clear it later)
+			sty	snd_theme_tmp	; use this as scratch (we'll clear it later)
 			ldy	#SND_INSTR_SIZE - 1
 .next_null		sta	(dst), y	; A must == 0 to be here...
 			dey
 			bpl	.next_null
-			ldx	snd_theme_idx	; but restore it into X
+			ldx	snd_theme_tmp	; but restore it into X
 			bpl	.null_rejoin
 
 	;; Note pitches
