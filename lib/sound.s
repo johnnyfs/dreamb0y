@@ -130,12 +130,35 @@ SN	equ	7	; sixteenth note
 TN	equ	3	; thirty-second note
 XN	equ	1	; sixty-fourth note
 YN	equ	0	; thirty-second note
-;; Effects flags (high 3 bits)
+; Effects flags (high 3 bits)
        ;; TBD
 
 ; Commands (mutually exclusive with notes, indicated by high bit
 SND_CMD_FLAG	equ	%10000000
 SND_CMD_REPEAT	equ	(SND_CMD_FLAG|0)	; return to beginning of chain
+
+; Advance the volume envelope & set the volume register (for square/noise channels)
+; zero flag should be unset after return
+SND_ENV_ADVANCE		MACRO
+snd_env_advance_\1	lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
+			beq	.no_env_\1
+			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
+			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr), y
+			bmi	.decay_maybe_\1
+			ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
+.adv_to_decay_\1	iny
+			sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
+			rts
+.decay_maybe_\1		lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
+			cmp	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
+			beq	.adv_to_decay_\1
+.no_env_\1		rts
+			ENDM
+
+			SND_ENV_ADVANCE 0
+			SND_ENV_ADVANCE 1
+			SND_ENV_ADVANCE 3
 
 ;; Advance the indexed sound channel
 ;; MACRO \1:channel
@@ -171,20 +194,14 @@ SND_CHAIN_ADVANCE	MACRO
 			;; Set the duty/volume register
 			IF \1 == 2 ; Triangle: no volume control, so just copy the instr value
 				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
-			ELSE       ; Sq/Noi: if not null, load the first envelope value
-				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
-				beq	.no_env_\1
-				sty	snd_theme_tmp ; save the chain index
-				ldy	#0
-				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr), y
-				iny
-				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
-				ldy	snd_theme_tmp ; restore the chain index
-
-				;: On null ptr, a=0, so this is equivalent to lda
-.no_env_\1			ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol				
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
+			ELSE       ; Sq/Noi: if not null, reset env idx and advance
+				lda	#0
+				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
+				sty	snd_theme_tmp
+				jsr	snd_env_advance_\1
+				ldy	snd_theme_tmp
 			ENDC
-			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
 
 			;; Set the pitch
 			IF \1 < 3 ; sq1/2 + triangle: look up the note value
@@ -222,21 +239,9 @@ SND_CHAIN_ADVANCE	MACRO
 			;; For non-triangle channels, advance the volume envelope
 			IF \1 != 2
 				;; Advance the volume envelope as applicable
-.env_maybe_\1			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
-				beq	.done_\1 ; index wasn't advanced at start => null ptr
-				tay
-				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr), y
-				bmi	.decay_maybe_\1 ; (-1) == end of envelope
-				ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
-				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
-.adv_to_decay_\1		iny
-				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
+.env_maybe_\1			jsr	snd_env_advance_\1
 				bne	.done_\1
-				beq	.hang_\1 ; lock up if we roll over on an envelope
-.decay_maybe_\1			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
-				cmp	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
-				bne	.done_\1
-				beq	.adv_to_decay_\1 ; skip the (-1) marker exactly once
+				beq	.done_\1 ; just in case
 			ENDC
 
 			;; Handle a command

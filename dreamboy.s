@@ -807,7 +807,10 @@ test_chain3=*
 	db	E3, WN, B3, WN, SND_CMD_REPEAT
 
 test_chain4=*
-	db	0, EN, 10, QN, 11, EN, PN|2, EN, 10, QN, PN|2, SN, PN|2, SN
+	db	0, QN, 1, QN, 2, QN, 3, QN, 4, QN, 5, QN, 6, QN, 7, QN
+	db	8, QN, 9, QN, 10, QN, 11, QN, 12, QN, 13, QN, 14, QN, 15, QN
+	db	0|PN, QN, 1|PN, QN, 2|PN, QN, 3|PN, QN, 4|PN, QN, 5|PN, QN, 6|PN, QN, 7|PN, QN
+	db	8|PN, QN, 9|PN, QN, 10|PN, QN, 11|PN, QN, 12|PN, QN, 13|PN, QN, 14|PN, QN, 15|PN, QN
 	db	SND_CMD_REPEAT
 
 test_instr1=*
