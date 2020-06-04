@@ -812,10 +812,10 @@ test_chain4=*
 
 test_instr1=*
 	db	%10110000 ; duty 12.5, software volume (TODO: 0 volume)
-	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	15
 	db	12
 	dw	test_env1
+	dw	NULL
 
 test_env1=*
 	db	1, 4, 8, 8, 12, 15, 15, 15, 14, 10, -1
@@ -823,10 +823,10 @@ test_env1=*
 
 test_instr2=*
 	db	%00110000 ; duty 12.5, software volume (TODO: 0 volume)
-	db	%00001000 ; no sweep (negate on so channel isn't muted)
 	db	6
 	db	0
 	dw	test_env2
+	dw	NULL
 
 test_env2=*
 	db	4, 8, 12, 15, 15, 15, 10, 8, -1
@@ -834,17 +834,17 @@ test_env2=*
 
 test_instr3=*
 	db	%10001111
-	db	%00000000 ; ignored
 	db	%11111000
 	db	12
+	dw	NULL
 	dw	NULL
 
 test_instr4=*
 	db	%00110000
-	db	%00000000 ; mode
 	db	15
 	db	0	  ; ignored
 	dw	test_env4
+	dw	NULL
 
 test_env4=*
 	db	15, 14, 10, 2, 1, 2, 1, -1, 0, 1, 0, -1

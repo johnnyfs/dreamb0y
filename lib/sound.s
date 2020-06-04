@@ -4,8 +4,8 @@
 ;;;
 
 ; We need to force this, b/c the assembler won't assume 1-byte for zero page
-_SND_INSTR_SIZE=6
-IF SND_INSTR_SIZE != 6
+_SND_INSTR_SIZE=7
+IF SND_INSTR_SIZE != _SND_INSTR_SIZE
 	FAIL "Mismatch between library and zero page instrument size"
 ENDC
 
@@ -185,13 +185,6 @@ SND_CHAIN_ADVANCE	MACRO
 .no_env_\1			ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol				
 			ENDC
 			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
-
-			;; Set the sweep register
-			;; TODO: why does this mute channel 2?
-			;IF \1 < 2
-				;lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_sq_sweep
-				;sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 1
-			;ENDC
 
 			;; Set the pitch
 			IF \1 < 3 ; sq1/2 + triangle: look up the note value
