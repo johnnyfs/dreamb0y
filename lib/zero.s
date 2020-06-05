@@ -241,6 +241,7 @@ SND_INSTR_SIZE=*
 snd_chain_idx		ds	1	; offset in channel's current chain
 snd_chain_wait		ds	1	; duration to wait until next note/cmd
 snd_chain_env_idx	ds	1	; offset in volume envelope sequence, if any
+snd_chain_note		ds	1	; base to add pitch modulation (includes transpose)
 snd_chain_pitch_idx	ds	1	; offset in pitch modulation sequence, if any
 snd_chain_pitch_wait	ds	1	; time to wait for next pitch change
 SND_CHAIN_SIZE=*

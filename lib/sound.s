@@ -205,13 +205,23 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; Start the note
 			IF \1 < 3	; noise channel period is copied straight
-				tax
+				sty	snd_theme_tmp 	; save chain index
+
+				;; Save the transposed base note
+				clc
+				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
+				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
+
+				;; Check for pitch modulation
+				tax	; save transposed note value
 				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
 				beq	.no_pitch_mod_\1
-				sty	snd_theme_tmp ; save index
-				ldy	#0
 
-				; First byte is duration of modulation step
+
+				ldy	#0		; clear pitch mod index
+				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
+
+				; First byte of pitch mod is duration of modulation step
 				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
 				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
 				iny
@@ -220,14 +230,14 @@ SND_CHAIN_ADVANCE	MACRO
 				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
 				iny
 				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
-				ldy	snd_theme_tmp
+
 .no_pitch_mod_\1		sta	snd_theme_acc ; 0 if no pitch modulation
 				txa
 				clc
-				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
-				clc
 				adc	snd_theme_acc	; +0 if no pitch modulation
 				asl	; tbl offset = (index + transpose) * 2 byte ptr with
+
+				ldy	snd_theme_tmp ; restore chain index
 			ENDC
 			tax
 
