@@ -162,20 +162,28 @@ snd_env_advance_\1	lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
 			SND_ENV_ADVANCE 3
 
 SND_PITCH_ADVANCE	MACRO
-			lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
-			beq	.no_pitch_\1
-			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
+			;; If pitch ptr is NULL, then skip it
+snd_pitch_advance_\1	lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+			beq	.no_pitch_mod_\1
+
+			; First byte of pitch mod is duration, second is amount
+			ldy	snd_chains  + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
 			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
-.no_pitch_\1		clc	; a is 0 on branch, so this is equivalent to lda
-			adc	snd_pitches, x	; load low byte of pitch
-			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
-			inx
-			lda	snd_pitches, x	; load high byte
-			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
+			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
+			iny
+			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
+			iny
+			sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
+
+			;; Add modulation to base (will be +0 if no modulation)
+.no_pitch_mod_\1 	clc
+			adc	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
+			asl	; tbl offset = (index + transpose + modulation) * 2 ptr width
 			rts
 			ENDM
 
-			; Only the square and triangle channels support pitch modulation
+			;; Advance pitch modulation for square and triangle waves
+			;; Clobbers Y, sets A = transposed and modulated note index
 			SND_PITCH_ADVANCE 0
 			SND_PITCH_ADVANCE 1
 			SND_PITCH_ADVANCE 2
@@ -205,41 +213,19 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; Start the note
 			IF \1 < 3	; noise channel period is copied straight
-				sty	snd_theme_tmp 	; save chain index
-
-				;; Save the transposed base note
+				;; Save transposed base note (modulation is based on this each frame)
 				clc
 				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
 				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
 
-				;; Check for pitch modulation
-				tax	; save transposed note value
-				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
-				beq	.no_pitch_mod_\1
-
-
+				;; Run pitch modulation
+				sty	snd_theme_tmp 	; save chain index
 				ldy	#0		; clear pitch mod index
 				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
-
-				; First byte of pitch mod is duration of modulation step
-				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
-				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
-				iny
-
-				; Second byte is amount of modulation
-				lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
-				iny
-				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
-
-.no_pitch_mod_\1		sta	snd_theme_acc ; 0 if no pitch modulation
-				txa
-				clc
-				adc	snd_theme_acc	; +0 if no pitch modulation
-				asl	; tbl offset = (index + transpose) * 2 byte ptr with
-
-				ldy	snd_theme_tmp ; restore chain index
+				jsr	snd_pitch_advance_\1 ; clobbers Y, sets A = note index
+				ldy	snd_theme_tmp	; restore chain index
 			ENDC
-			tax
+			tax	; X = if noise then raw_period else tranposed_modulated_note_index
 
 			;; Set the duty/volume register
 			IF \1 == 2 ; Triangle: no volume control, so just copy the instr value
