@@ -793,8 +793,17 @@ test_theme=*
 	dw	test_chain1, test_chain2, test_chain3, test_chain4
 
 test_chain1=*
-	db	E3, QN, B4, QN, Fs3, QN, E3, QN
-	db	E3, QN, Gs3, QN, B4, QN, E3, QN
+	db	E3, QN, B4, QN, SND_CMD_PITCH_PTR
+	dw	test_pitch2
+	db	Fs3, QN, SND_CMD_PITCH_PTR
+	dw	test_pitch1
+	db	E3, QN
+
+	db	E3, QN, SND_CMD_PITCH_PTR
+	dw	test_pitch2
+	db	Gs3, QN, SND_CMD_PITCH_PTR
+	dw	test_pitch1
+	db	B4, QN, E3, QN
 
 	db	SND_CMD_REPEAT
 test_chain2=*
@@ -804,7 +813,7 @@ test_chain2=*
 	db	SND_CMD_REPEAT
 
 test_chain3=*
-	db	E3, WN, B3, WN, SND_CMD_REPEAT
+	db	E3, QN, B3, EN, E3, EN, B3, SN, E3, SN, B3, SN, E3, SN, B3, QN, SND_CMD_REPEAT
 
 test_chain4=*
 	db	0, QN, 1, QN, 2, QN, 3, QN, 4, QN, 5, QN, 6, QN, 7, QN
@@ -825,7 +834,13 @@ test_env1=*
 	db	8, 4, 2, 1, -1
 
 test_pitch1=*
-	db	1, 0, 1, 4, 1, 7, -1
+	db	2, 0, 3, 4, 1, 7, -1
+
+test_pitch2=*
+	db	2, 0, 3, 3, 1, 7, -1
+
+test_pitch3=*
+	db	2, 0, 3, 3, 1, 6, -1
 
 test_instr2=*
 	db	%00110000 ; duty 12.5, software volume (TODO: 0 volume)

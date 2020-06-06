@@ -134,8 +134,10 @@ YN	equ	0	; thirty-second note
        ;; TBD
 
 ; Commands (mutually exclusive with notes, indicated by high bit
-SND_CMD_FLAG	equ	%10000000
-SND_CMD_REPEAT	equ	(SND_CMD_FLAG|0)	; return to beginning of chain
+SND_CMD_FLAG		equ	%10000000
+SND_CMD_REPEAT		equ	(SND_CMD_FLAG|0)	; return to beginning of chain
+SND_CMD_PITCH_PTR	equ	(SND_CMD_FLAG|1)	; load next two values as (little-endian) pitch ptr
+SND_CMD_MAX		equ	1
 
 ; Advance the volume envelope & set the volume register (for square/noise channels)
 ; zero flag should be unset after return
@@ -210,7 +212,7 @@ snd_pitch_advance_\1 	dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wai
 ;;   channel: the index 0-3 of sq1, sq2, tri, and noi
 SND_CHAIN_ADVANCE	MACRO
 			;; Do nothing if there is no chain for this channel
-			lda	snd_chain_ptrs + 2 * \1 + 1
+snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			beq	.done_\1
 
 			;; Count back duration to (-1)
@@ -225,7 +227,7 @@ SND_CHAIN_ADVANCE	MACRO
 			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
 
 			;; High bid set => process command; otherwise => play note
-.repeat_\1		lda	(snd_chain_ptrs + 2 * \1), y
+.next_frame_\1		lda	(snd_chain_ptrs + 2 * \1), y
 			bmi	.do_command_\1
 
 			;; Start the note
@@ -310,17 +312,32 @@ SND_CHAIN_ADVANCE	MACRO
 				beq	.done_\1 ; NULL pitch mod ptr => do nothing
 				jsr	snd_pitch_advance_\1 ; otherwise advance pitch modulation
 			ENDC
-			;; TODO: move command handling up?
-			bne	.done_\1
-			beq	.done_\1
+.done_\1		rts
 
 			;; Handle a command
 .do_command_\1		cmp	#SND_CMD_REPEAT
-			bne	.hang_\1	; crash on unrecognized commands
-			ldy	#0
-			beq	.repeat_\1
-.done_\1		nop			; TODO: be smarter
+			bne	.not_repeat_\1
+			ldy	#0		; repeat => just reset index and loop
+			beq	.next_frame_\1
+			bne	.hang_\1	; hang on rollover for now
+.not_repeat_\1		cmp	#SND_CMD_PITCH_PTR
+			bne	.hang_\1	; hang on unrecognized commands
+			iny
+			lda	(snd_chain_ptrs + 2 * \1), y ; set low byte of new ptr
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr
+			iny
+			lda	(snd_chain_ptrs + 2 * \1), y ; set high byte of new ptr
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+			iny
+			bne	.next_frame_\1
+			beq	.hang_\1	; hang on rollover for now
 			ENDM
+
+			;; Advance the specified channel to the next frame
+			SND_CHAIN_ADVANCE 0
+			SND_CHAIN_ADVANCE 1		
+			SND_CHAIN_ADVANCE 2		
+			SND_CHAIN_ADVANCE 3
 
 ; Load a theme and prepare the engine to play it
 			code
@@ -410,9 +427,9 @@ snd_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 		dw	$0015, $0014, $0013, $0012, $0011, $0010
 
 			code
-snd_advance		SND_CHAIN_ADVANCE 0
-			SND_CHAIN_ADVANCE 1		
-			SND_CHAIN_ADVANCE 2		
-			SND_CHAIN_ADVANCE 3
+snd_advance		jsr	snd_chain_advance_0
+			jsr	snd_chain_advance_1
+			jsr	snd_chain_advance_2
+			jsr	snd_chain_advance_3
 			rts
 
