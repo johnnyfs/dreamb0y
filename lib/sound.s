@@ -162,28 +162,45 @@ snd_env_advance_\1	lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
 			SND_ENV_ADVANCE 3
 
 SND_PITCH_ADVANCE	MACRO
-			;; If pitch ptr is NULL, then skip it
-snd_pitch_advance_\1	lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
-			beq	.no_pitch_mod_\1
+			;; If we're still waiting, then do nothing
+snd_pitch_advance_\1 	dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
+			bne	.no_pitch_mod_\1 ; on first call we go from 1 => 0
 
-			; First byte of pitch mod is duration, second is amount
+			;; First byte of pitch mod is duration, where -1 => loop
 			ldy	snd_chains  + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
-			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
-			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
+.loop_\1		lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
+			bpl	.no_loop_\1 ; loop on -1 (NOTE: if 1st byte is -1 this will hang!)
+			ldy	#0
+			beq	.loop_\1
+.no_loop_\1		sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
+
+			;; Second value is index modulation
 			iny
 			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr) , y
 			iny
 			sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
 
-			;; Add modulation to base (will be +0 if no modulation)
-.no_pitch_mod_\1 	clc
+			;; Calculate pitch index
+			clc
 			adc	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
 			asl	; tbl offset = (index + transpose + modulation) * 2 ptr width
-			rts
+
+			;: Look up and set pitch period
+			tax
+			lda	snd_pitches, x	; load low byte of pitch
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
+			inx
+			lda	snd_pitches, x	; load high byte
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
+
+.no_pitch_mod_\1 	rts
 			ENDM
 
 			;; Advance pitch modulation for square and triangle waves
-			;; Clobbers Y, sets A = transposed and modulated note index
+			;; Clobbers Y, sets the pitch regs on first and new values
+			;; Caller must check whether pitch mod ptr is NULL or else
+			;; behavior is undefined. (This is because NULL handling
+			;; requires different behavior on the first call.)
 			SND_PITCH_ADVANCE 0
 			SND_PITCH_ADVANCE 1
 			SND_PITCH_ADVANCE 2
@@ -198,10 +215,10 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; Count back duration to (-1)
 			dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
-			IF \1 == 2
-				bpl	.done_\1
-			ELSE
+			IF \1 != 2
 				bpl	.env_maybe_\1
+			ELSE
+				bpl	.pitch_mod_maybe_\1
 			ENDC
 
 			;; Advance the index into the channel
@@ -213,40 +230,52 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; Start the note
 			IF \1 < 3	; noise channel period is copied straight
-				;; Save transposed base note (modulation is based on this each frame)
+				;; Add transposition no matter what
 				clc
 				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
-				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
 
-				;; Run pitch modulation
+				;; Run pitch modulation (unless ptr is null)
+				ldx	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+				bne	.do_pitch_mod_\1
+
+				;; On null ptr just set the note exactly once
+				asl
+				tax
+				lda	snd_pitches, x	; load low byte of pitch
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
+				inx
+				lda	snd_pitches, x	; load high byte
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
+				inx	; ensure bne branches (high byte of period can be $00)
+				bne	.skip_pitch_mod_\1
+				beq	.skip_pitch_mod_\1 ; in case we roll over (unlikely but possible with high mod)
+
+				;; Otherwise reset modulation and call the common routine
+.do_pitch_mod_\1		sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note ; store note for future passes
 				sty	snd_theme_tmp 	; save chain index
-				ldy	#0		; clear pitch mod index
+				ldy	#0		; clear pitch mod index & wait
 				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_idx
+				iny	; for sanity w/r/t timing (1 => 1 frame)
+				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
 				jsr	snd_pitch_advance_\1 ; clobbers Y, sets A = note index
 				ldy	snd_theme_tmp	; restore chain index
+			ELSE
+				tax	; X = raw period for noise
 			ENDC
-			tax	; X = if noise then raw_period else tranposed_modulated_note_index
 
 			;; Set the duty/volume register
 			IF \1 == 2 ; Triangle: no volume control, so just copy the instr value
-				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
+.skip_pitch_mod_\1		lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
 			ELSE       ; Sq/Noi: if not null, reset env idx and advance
-				lda	#0
+.skip_pitch_mod_\1		lda	#0
 				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
 				sty	snd_theme_tmp ; save y from destruction
 				jsr	snd_env_advance_\1
 				ldy	snd_theme_tmp ; restore y
 			ENDC
 
-			;; Set the pitch
-			IF \1 < 3 ; sq1/2 + triangle: look up the note value
-				lda	snd_pitches, x	; load low byte of pitch
-				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
-				inx
-				lda	snd_pitches, x	; load high byte
-				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
-			ELSE ; noise channel: no lookup, just copy the period in
+			IF \1 == 3 ; sq1/2 + triangle: look up the note value
 				txa
 				and	#PN
 				beq	.no_pmode_\1
@@ -274,11 +303,16 @@ SND_CHAIN_ADVANCE	MACRO
 
 			;; For non-triangle channels, advance the volume envelope
 			IF \1 != 2
-				;; Advance the volume envelope as applicable
 .env_maybe_\1			jsr	snd_env_advance_\1
-				bne	.done_\1
-				beq	.done_\1 ; just in case
 			ENDC
+			IF \1 != 3
+.pitch_mod_maybe_\1		lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+				beq	.done_\1 ; NULL pitch mod ptr => do nothing
+				jsr	snd_pitch_advance_\1 ; otherwise advance pitch modulation
+			ENDC
+			;; TODO: move command handling up?
+			bne	.done_\1
+			beq	.done_\1
 
 			;; Handle a command
 .do_command_\1		cmp	#SND_CMD_REPEAT

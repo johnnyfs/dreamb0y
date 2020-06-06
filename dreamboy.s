@@ -825,7 +825,7 @@ test_env1=*
 	db	8, 4, 2, 1, -1
 
 test_pitch1=*
-	db	4, 0, 4, 4, 4, 7, -1
+	db	1, 0, 1, 4, 1, 7, -1
 
 test_instr2=*
 	db	%00110000 ; duty 12.5, software volume (TODO: 0 volume)
@@ -843,7 +843,7 @@ test_instr3=*
 	db	%11111000
 	db	12
 	dw	NULL
-	dw	NULL
+	dw	test_pitch1
 
 test_instr4=*
 	db	%00110000
