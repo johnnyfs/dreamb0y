@@ -156,9 +156,9 @@ reset	sei
 	sta	maps + 1
 
 	;; choose the starting sound theme
-	lda	#test_theme & $ff	
+	lda	#realworld_day_village_theme & $ff	
 	sta	snd_theme
-	lda	#test_theme >> 8
+	lda	#realworld_day_village_theme >> 8
 	sta	snd_theme + 1
 	jsr	snd_start_theme
 
@@ -788,87 +788,87 @@ include res/status_bar_indeces.tbl.s
 
 ;; Music themes {{{
 
-test_theme=*
-	dw	test_instr1, test_instr2, test_instr3, test_instr4
-	dw	test_chain1, test_chain2, test_chain3, test_chain4
+realworld_day_village_theme=*
+	dw	flute, NULL, bass, NULL
+	dw	rdvt_long_melody, NULL, rdvt_bass_chain, NULL
 
-test_chain1=*
-	db	E3, QN, B4, QN, SND_CMD_PITCH_PTR
-	dw	test_pitch2
-	db	Fs3, QN, SND_CMD_PITCH_PTR
-	dw	test_pitch1
-	db	E3, QN
+rdvt_bass_chain=*
+	db	E2,WN
+	db	B3,WN
+	db	FS2,WN
+	db	E2,WN
 
-	db	E3, QN, SND_CMD_PITCH_PTR
-	dw	test_pitch2
-	db	Gs3, QN, SND_CMD_PITCH_PTR
-	dw	test_pitch1
-	db	B4, QN, E3, QN
-
-	db	SND_CMD_REPEAT
-test_chain2=*
-	db	Gs3, QN, Ds4, QN, Cs4, QN, Gs3, QN
-	db	B4, QN, Ds4, EN, Ds4, EN, Fs3, QN, B4, QN
-
+	db	E2,WN
+	db	Gs2,WN
+	db	B3,WN
+	db	E2,WN
 	db	SND_CMD_REPEAT
 
-test_chain3=*
-	db	E3, QN, B3, EN, E3, EN, B3, SN, E3, SN, B3, SN, E3, SN, B3, QN, SND_CMD_REPEAT
+rdvt_long_melody=*
+	db	E3,EN, Gs3,EN, B3,EN, Fs3,EN, B3,QN, E3,QN
+	db	B4,QN, E4,QN, Cs4,QN, B4,QN
 
-test_chain4=*
+	db	Fs3,EN, A4,EN, Cs4,EN, B4,EN, Cs4,QN, Fs3,QN
+	db	E3,QN, Ds3,QN, E3,HN
+
+	db	E3,EN, Gs3,EN, B4,EN, Cs4,EN, B4,QN, E3,QN
+	db	Gs3,QN, B4,QN, Cs4,QN, Ds4,QN
+
+	db	B4,EN, Ds4,EN, Fs4,EN, Cs4,EN, B4,QN, A4,QN
+	db	E3,QN, Fs3,QN, E3,HN
+	db	SND_CMD_REPEAT
+
+flute=*
+	db	%10110000 ; duty 12.5, software volume (TODO: 0 volume)
+	db	15
+	db	0		
+	dw	flute_env
+	dw	NULL
+flute_env=*
+	db	1, 4, 4, 8, 12, 15, 15, 15, 14, 10, -1
+	db	8, 4, 2, 1, -1
+
+horn=*
+	db	%00110000 ; duty 12.5, software volume (TODO: 0 volume)
+	db	6
+	db	0
+	dw	horn_env
+	dw	NULL
+horn_env=*
+	db	4, 8, 12, 15, 15, 15, 10, 8, -1
+	db	7, 3, 1, 0, -1
+
+bass=*
+	db	%10001111
+	db	0
+	db	12
+	dw	NULL
+	dw	NULL
+
+percussion=*
+	db	%00110000
+	db	15
+	db	0	  ; ignored
+	dw	percussion_env
+	dw	NULL
+percussion_env=*
+	db	15, 14, 10, 2, 1, 2, 1, -1, 0, 1, 0, -1
+
+arp_maj=*
+	db	2, 0, 2, 4, 2, 7, -1
+
+arp_min=*
+	db	2, 0, 2, 3, 2, 7, -1
+
+arp_dim=*
+	db	2, 0, 2, 3, 2, 6, -1
+
+percussion_test_chain=*
 	db	0, QN, 1, QN, 2, QN, 3, QN, 4, QN, 5, QN, 6, QN, 7, QN
 	db	8, QN, 9, QN, 10, QN, 11, QN, 12, QN, 13, QN, 14, QN, 15, QN
 	db	0|PN, QN, 1|PN, QN, 2|PN, QN, 3|PN, QN, 4|PN, QN, 5|PN, QN, 6|PN, QN, 7|PN, QN
 	db	8|PN, QN, 9|PN, QN, 10|PN, QN, 11|PN, QN, 12|PN, QN, 13|PN, QN, 14|PN, QN, 15|PN, QN
 	db	SND_CMD_REPEAT
-
-test_instr1=*
-	db	%10110000 ; duty 12.5, software volume (TODO: 0 volume)
-	db	15
-	db	12		
-	dw	test_env1
-	dw	test_pitch1
-
-test_env1=*
-	db	1, 4, 8, 8, 12, 15, 15, 15, 14, 10, -1
-	db	8, 4, 2, 1, -1
-
-test_pitch1=*
-	db	2, 0, 3, 4, 1, 7, -1
-
-test_pitch2=*
-	db	2, 0, 3, 3, 1, 7, -1
-
-test_pitch3=*
-	db	2, 0, 3, 3, 1, 6, -1
-
-test_instr2=*
-	db	%00110000 ; duty 12.5, software volume (TODO: 0 volume)
-	db	6
-	db	0
-	dw	test_env2
-	dw	NULL
-
-test_env2=*
-	db	4, 8, 12, 15, 15, 15, 10, 8, -1
-	db	7, 3, 1, 0, -1
-
-test_instr3=*
-	db	%10001111
-	db	%11111000
-	db	12
-	dw	NULL
-	dw	test_pitch1
-
-test_instr4=*
-	db	%00110000
-	db	15
-	db	0	  ; ignored
-	dw	test_env4
-	dw	NULL
-
-test_env4=*
-	db	15, 14, 10, 2, 1, 2, 1, -1, 0, 1, 0, -1
 
 ;; }}}
 

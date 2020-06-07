@@ -33,11 +33,14 @@ B2	equ	14
 C2	equ	15
 Db2	equ	16
 D2	equ	17
+Ds2	equ	18
 Eb2	equ	18
 E2	equ	19
 F2	equ	20
+Fs2	equ	21
 Gb2	equ	21
 G2	equ	22
+Gs2	equ	23
 Ab2	equ	23
 A3	equ	24
 As3	equ	25
@@ -217,11 +220,7 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 
 			;; Count back duration to (-1)
 			dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
-			IF \1 != 2
-				bpl	.env_maybe_\1
-			ELSE
-				bpl	.pitch_mod_maybe_\1
-			ENDC
+			bpl	.env_maybe_\1
 
 			;; Advance the index into the channel
 			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
@@ -303,10 +302,16 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 
 .hang_\1		jmp	.hang_\1	; for now just crash out
 
-			;; For non-triangle channels, advance the volume envelope
+			;; Square/noise => advance volume envlope; triange => just time out as/a
 			IF \1 != 2
 .env_maybe_\1			jsr	snd_env_advance_\1
+			ELSE
+.env_maybe_\1			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
+				cmp	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
+				bne	.pitch_mod_maybe_\1
+				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 0
 			ENDC
+				
 			IF \1 != 3
 .pitch_mod_maybe_\1		lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
 				beq	.done_\1 ; NULL pitch mod ptr => do nothing
@@ -318,8 +323,7 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 .do_command_\1		cmp	#SND_CMD_REPEAT
 			bne	.not_repeat_\1
 			ldy	#0		; repeat => just reset index and loop
-			beq	.next_frame_\1
-			bne	.hang_\1	; hang on rollover for now
+			jmp	.next_frame_\1
 .not_repeat_\1		cmp	#SND_CMD_PITCH_PTR
 			bne	.hang_\1	; hang on unrecognized commands
 			iny
