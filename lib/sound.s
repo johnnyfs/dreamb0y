@@ -140,7 +140,19 @@ YN	equ	0	; thirty-second note
 SND_CMD_FLAG		equ	%10000000
 SND_CMD_REPEAT		equ	(SND_CMD_FLAG|0)	; return to beginning of chain
 SND_CMD_PITCH_PTR	equ	(SND_CMD_FLAG|1)	; load next two values as (little-endian) pitch ptr
-SND_CMD_MAX		equ	1
+SND_CMD_MAJ		equ	(SND_CMD_FLAG|2)	; load built-in major arpreggio to pitch ptr
+SND_CMD_MIN		equ	(SND_CMD_FLAG|3)	; load built-in minor arpreggio to pitch ptr
+SND_CMD_DIM		equ	(SND_CMD_FLAG|4)	; load built-in diminished arpreggio to pitch ptr
+
+;; Built-in arpreggio pitch runs
+SND_ARP_WAIT=2
+snd_arp_maj=*
+	db	SND_ARP_WAIT, 0, SND_ARP_WAIT, 4, SND_ARP_WAIT, 7, -1
+snd_arp_min=*
+	db	SND_ARP_WAIT, 0, SND_ARP_WAIT, 3, SND_ARP_WAIT, 7, -1
+snd_arp_dim=*
+	db	SND_ARP_WAIT, 0, SND_ARP_WAIT, 3, SND_ARP_WAIT, 6, -1
+
 
 ; Advance the volume envelope & set the volume register (for square/noise channels)
 ; zero flag should be unset after return
@@ -325,7 +337,7 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			ldy	#0		; repeat => just reset index and loop
 			jmp	.next_frame_\1
 .not_repeat_\1		cmp	#SND_CMD_PITCH_PTR
-			bne	.hang_\1	; hang on unrecognized commands
+			bne	.not_pitch_ptr_\1	; hang on unrecognized commands
 			iny
 			lda	(snd_chain_ptrs + 2 * \1), y ; set low byte of new ptr
 			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr
@@ -334,7 +346,31 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
 			iny
 			bne	.next_frame_\1
-			beq	.hang_\1	; hang on rollover for now
+.not_pitch_ptr_\1	cmp	#SND_CMD_MAJ
+			bne	.not_maj_\1
+			lda	#snd_arp_maj & $ff
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr
+			lda	#snd_arp_maj >> 8
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+			iny
+			jmp	.next_frame_\1
+.not_maj_\1		cmp	#SND_CMD_MIN
+			bne	.not_min_\1
+			lda	#snd_arp_min & $ff
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr
+			lda	#snd_arp_min >> 8
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+			iny
+			jmp	.next_frame_\1
+.not_min_\1		cmp	#SND_CMD_DIM
+			bne	.not_dim_\1
+			lda	#snd_arp_dim & $ff
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr
+			lda	#snd_arp_dim >> 8
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
+			iny
+			jmp	.next_frame_\1
+.not_dim_\1		beq	.hang_\1	; hang on rollover for now
 			ENDM
 
 			;; Advance the specified channel to the next frame
