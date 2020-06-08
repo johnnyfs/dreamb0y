@@ -805,14 +805,13 @@ rdvt_bass_chain=*
 	db	SND_CMD_REPEAT
 
 rdvt_melody=*
-	db	E3,EN, Fs3,SN,Gs3,SN, B3,EN, Ds3,SN,Fs3,SN, B3,QN, E3,QN
+	db	E3,EN, Fs3,SN,Gs3,SN, B3,EN, Ds3,SN,Fs3,SN, B3,EN,Ds3,EN, E3,QN
 	db	B4,QN, E4,QN, Cs4,QN, B4,QN
 
 	db	Fs3,EN, A4,EN, Cs4,EN, B4,EN, Cs4,QN, Fs3,QN
 	db	E3,QN, Ds3,QN, E3,HN
-	db	SND_CMD_REPEAT
 
-	db	E3,EN, Fs3,SN,Gs3,SN, B4,EN, Cs4,SN,Ds4,SN, B4,QN, E3,QN
+	db	E3,EN, Fs3,SN,Gs3,SN, B4,EN, Cs4,SN,Ds4,SN, B4,EN,Cs4,EN, Ds4,QN
 	db	Gs3,QN, B4,QN, Cs4,QN, Ds4,QN
 
 	db	B4,EN, Ds4,EN, Fs4,EN, Cs4,EN, B4,QN, A4,QN
@@ -826,17 +825,17 @@ rdvt_harmony=*
 	db	Fs3,HN, Fs3,EN,A4,EN, Cs4,QN
 	db	E3,EN, Gs3,SN,E3,SN, Gs3,EN, B4,EN, E3,HN
 
-	db	SND_CMD_REPEAT
-	db	E3,HN+QN+1,0,QN
-	db	Gs3,HN+QN+1,0,QN
-	db	B4,HN+QN+1,0,QN
-	db	E3,HN+QN+1,0,QN
+	db	E3,HN, E3,EN,Gs3,EN, B4,QN
+	db	Gs3,EN,B4,EN, Ds4,EN,B4,EN, Gs3,HN
+
+	db	B4,HN, B4,EN,Ds4,EN, Fs4,QN
+	db	E3,QN, Gs3,SN,E3,SN, Gs3,EN, E3,HN
 	db	SND_CMD_REPEAT
 
 flute=*
 	db	%10110000 ; duty 12.5, software volume (TODO: 0 volume)
 	db	15
-	db	0		
+	db	0
 	dw	flute_env
 	dw	NULL
 flute_env=*
