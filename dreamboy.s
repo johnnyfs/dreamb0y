@@ -793,15 +793,17 @@ realworld_day_village_theme=*
 	dw	rdvt_melody, rdvt_harmony, rdvt_bass_chain, NULL
 
 rdvt_bass_chain=*
-	db	E2,WN
-	db	B3,WN
-	db	FS2,WN
-	db	E2,WN
+	db	E2,EN, Gs2,EN, B2,EN, Gs2,EN,  E2,EN, Gs2,EN, B2,EN, E2,EN
+	db	B3,EN, Fs3,SN,Ds3,SN, B3,EN, Fs3,SN,Ds3,SN, B3,QN,A3,QN
 
-	db	E2,WN
-	db	Gs2,WN
-	db	B3,WN
-	db	E2,WN
+	db	Fs2,EN, A3,EN, Cs2,EN, A3,EN, Fs2,EN, A3,EN, Cs2,EN, Fs2,EN
+	db	E2,EN, B3,SN,Gs2,SN, E2,EN, Gs2,SN,B3,SN, E2,QN,Ds2,QN
+
+	db	E2,EN, Gs2,EN, B2,EN, Gs2,EN,  E2,EN, Gs2,EN, B2,EN, E2,EN
+	db	Gs2,EN, Ds3,SN,B3,SN, Gs2,EN, Ds3,SN,B3,SN, Gs2,QN,B3,QN
+
+	db	B3,EN, Ds3,EN, Fs3,EN, Ds3,EN, B3,EN, Ds3,EN, Fs3,EN, B3,EN
+	db	E2,EN, B3,SN,Gs2,SN, E2,EN, Gs2,SN,B3,SN, E2,QN,E3,QN
 	db	SND_CMD_REPEAT
 
 rdvt_melody=*
@@ -849,15 +851,14 @@ horn=*
 	dw	horn_env
 	dw	NULL
 horn_env=*
-	;db	0, 1, 2, 4, 8, 8, 8, 6, -1
-	db	4, 8, 10, 12, 8, -1
-	db	7, 3, 0, -1
+	db	4, 8, 15, 14, 8, -1
+	db	5, 2, 0, -1
 pitch1=*
 	db	4, 1, 3, 0, 2, -1, 8, 0, 1, -1, 0, 0
 
 bass=*
 	db	%10001111
-	db	0
+	db	2
 	db	12
 	dw	NULL
 	dw	NULL

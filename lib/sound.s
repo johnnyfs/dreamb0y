@@ -31,6 +31,7 @@ A2	equ	12
 Bb2	equ	13
 B2	equ	14
 C2	equ	15
+Cs2	equ	16
 Db2	equ	16
 D2	equ	17
 Ds2	equ	18
@@ -143,9 +144,10 @@ SND_CMD_PITCH_PTR	equ	(SND_CMD_FLAG|1)	; load next two values as (little-endian)
 SND_CMD_MAJ		equ	(SND_CMD_FLAG|2)	; load built-in major arpreggio to pitch ptr
 SND_CMD_MIN		equ	(SND_CMD_FLAG|3)	; load built-in minor arpreggio to pitch ptr
 SND_CMD_DIM		equ	(SND_CMD_FLAG|4)	; load built-in diminished arpreggio to pitch ptr
+SND_CMD_DECAY_OFF	equ	(SND_CMD_FLAG|5)	; alter instrument decay offset
 
 ;; Built-in arpreggio pitch runs
-SND_ARP_WAIT=2
+SND_ARP_WAIT=4
 snd_arp_maj=*
 	db	SND_ARP_WAIT, 0, SND_ARP_WAIT, 4, SND_ARP_WAIT, 7, -1
 snd_arp_min=*
@@ -370,7 +372,14 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
 			iny
 			jmp	.next_frame_\1
-.not_dim_\1		beq	.hang_\1	; hang on rollover for now
+.not_dim_\1		cmp	#SND_CMD_DECAY_OFF	
+			bne	.not_decay_off_\1
+			iny	
+			lda	(snd_chain_ptrs + 2 * \1), y ; set low byte of new ptr
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
+			iny
+			jmp	.next_frame_\1	
+.not_decay_off_\1	beq	.hang_\1	; hang on rollover for now
 			ENDM
 
 			;; Advance the specified channel to the next frame
