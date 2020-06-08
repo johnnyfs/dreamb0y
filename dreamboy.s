@@ -789,8 +789,15 @@ include res/status_bar_indeces.tbl.s
 ;; Music themes {{{
 
 realworld_day_village_theme=*
-	dw	flute, horn, bass, NULL
-	dw	rdvt_melody, rdvt_harmony, rdvt_bass_chain, NULL
+	;dw	flute, horn, bass, percussion
+	;dw	NULL, NULL, NULL, rdvt_perc_chain;percussion_test_chain
+	dw	flute, horn, bass, percussion
+	dw	rdvt_melody, rdvt_harmony, rdvt_bass_chain, rdvt_perc_chain
+
+rdvt_perc_chain=*
+	db	1,EN, 4,EN, 8,EN, PN|1,EN, 1,EN, 4,EN, 8,EN, PN|1,EN 
+	;db	1,EN, 4,EN, 1,EN, 4,EN, 1,EN, 4,EN, 8,EN, PN|1,EN 
+	db	SND_CMD_REPEAT
 
 rdvt_bass_chain=*
 	db	E2,EN, Gs2,EN, B2,EN, Gs2,EN,  E2,EN, Gs2,EN, B2,EN, E2,EN
@@ -870,7 +877,7 @@ percussion=*
 	dw	percussion_env
 	dw	NULL
 percussion_env=*
-	db	15, 14, 10, 2, 1, 2, 1, -1, 0, 1, 0, -1
+	db	10, 8, 4, 2, 1, 2, 1, -1, 0, 1, 0, -1
 
 percussion_test_chain=*
 	db	0, QN, 1, QN, 2, QN, 3, QN, 4, QN, 5, QN, 6, QN, 7, QN
