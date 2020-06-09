@@ -12,7 +12,8 @@ ENDC
 SND_CH_REGS=$4000 ;; PPU channel registers start at $4000
 SND_REGS_PER_CH=4 ;; 4 registers per channel
 
-PN=%00010000 	; periodic noise mode flag
+PN=	%00010000 	; periodic noise mode flag
+ENV2=	%00100000	; noise env swap flag
 
 	;; Note pitch indeces
 A1	equ	0
@@ -159,26 +160,33 @@ snd_arp_dim=*
 ; Advance the volume envelope & set the volume register (for square/noise channels)
 ; zero flag should be unset after return
 SND_ENV_ADVANCE		MACRO
-snd_env_advance_\1	lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
-			beq	.no_env_\1
+			IF	\2 == 0
+snd_env1_advance_\1=*
+			ELSE
+snd_env2_advance_\1=*
+			ENDC
+
+			lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1 + \2 * 2
+			beq	.no_env_\1_\2
 			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
-			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr), y
-			bmi	.decay_maybe_\1
+			lda	(snd_instrs + _SND_INSTR_SIZE * \1 + snd_instr_env_ptr + \2 * 2), y
+			bmi	.decay_maybe_\1_\2
 			ora	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_duty_vol
 			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH
-.adv_to_decay_\1	iny
+.adv_to_decay_\1_\2	iny
 			sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
 			rts
-.decay_maybe_\1		lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
+.decay_maybe_\1_\2	lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
 			cmp	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
-			beq	.adv_to_decay_\1
-.no_env_\1		rts
+			beq	.adv_to_decay_\1_\2
+.no_env_\1_\2		rts
 			ENDM
 
 			; Only the square and noise channels have volume envelopes
-			SND_ENV_ADVANCE 0
-			SND_ENV_ADVANCE 1
-			SND_ENV_ADVANCE 3
+			SND_ENV_ADVANCE 0, 0
+			SND_ENV_ADVANCE 1, 0
+			SND_ENV_ADVANCE 3, 0
+			SND_ENV_ADVANCE 3, 1  ; noise gets two envs
 
 SND_PITCH_ADVANCE	MACRO
 			;; If we're still waiting, then do nothing
@@ -286,12 +294,23 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 .skip_pitch_mod_\1		lda	#0
 				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_env_idx
 				sty	snd_theme_tmp ; save y from destruction
-				jsr	snd_env_advance_\1
+				;; Noise channel has alternate envelope instead of pitch mod
+				IF \1 == 3
+					txa
+					and	#ENV2
+					;; Save 0 => env1, 1 => env2
+					sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
+					beq	.adv_env1_\1
+					jsr	snd_env2_advance_\1
+					ldy	snd_theme_tmp
+					bne	.note_lookup_\1
+				ENDC
+.adv_env1_\1			jsr	snd_env1_advance_\1
 				ldy	snd_theme_tmp ; restore y
 			ENDC
 
 			IF \1 == 3 ; sq1/2 + triangle: look up the note value
-				txa
+.note_lookup_\1			txa
 				and	#PN
 				beq	.no_pmode_\1
 				txa
@@ -318,7 +337,18 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 
 			;; Square/noise => advance volume envlope; triange => just time out as/a
 			IF \1 != 2
-.env_maybe_\1			jsr	snd_env_advance_\1
+				;; Noise channel, decide which envelope to use
+				IF \1 == 3
+.env_maybe_\1				lda	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
+					bne	.do_env2_\1
+					jsr	snd_env1_advance_\1
+					rts	; no pitch mod for noise, so we're done	
+.do_env2_\1				jsr	snd_env2_advance_\1
+					rts
+				ELSE
+					;; Sq1/2, just use env1
+.env_maybe_\1				jsr	snd_env1_advance_\1
+				ENDC
 			ELSE
 .env_maybe_\1			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
 				cmp	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
