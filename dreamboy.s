@@ -795,11 +795,17 @@ realworld_day_village_theme=*
 	dw	rdvt_melody, rdvt_harmony, rdvt_bass_chain, rdvt_perc_chain
 
 rdvt_perc_chain=*
-	db	1,EN, 4,EN, 8,EN, ENV2|4,EN, 1,EN, 4,EN, 8,EN, ENV2|PN|0,EN 
+	db	1,EN, 4,EN, 8,EN, ENV2|4,EN, 1,EN, 4,EN, 8,EN, ENV2|PN|1,EN 
 	;db	1,EN, 4,EN, 1,EN, 4,EN, 1,EN, 4,EN, 8,EN, PN|1,EN 
 	db	SND_CMD_REPEAT
 
 rdvt_bass_chain=*
+	;; Lead-in TODO: w command/chaining?
+	db	E2,EN, Gs2,EN, B2,EN, Gs2,EN,  E2,EN, Gs2,EN, B2,EN, E2,EN
+	db	B3,EN, Fs3,SN,Ds3,SN, B3,EN, Fs3,SN,Ds3,SN, B3,QN,A3,QN
+	db	Fs2,EN, A3,EN, Cs2,EN, A3,EN, Fs2,EN, A3,EN, Cs2,EN, Fs2,EN
+	db	E2,EN, B3,SN,Gs2,SN, E2,EN, Gs2,SN,B3,SN, E2,QN,Ds2,QN
+
 	db	E2,EN, Gs2,EN, B2,EN, Gs2,EN,  E2,EN, Gs2,EN, B2,EN, E2,EN
 	db	B3,EN, Fs3,SN,Ds3,SN, B3,EN, Fs3,SN,Ds3,SN, B3,QN,A3,QN
 
@@ -814,6 +820,20 @@ rdvt_bass_chain=*
 	db	SND_CMD_REPEAT
 
 rdvt_melody=*
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+	db	INAUD,WN
+
 	db	E3,EN, Fs3,SN,Gs3,SN, B3,EN, Ds3,SN,Fs3,SN, B3,EN,Ds3,EN, E3,QN
 	db	B4,QN, E4,QN, Cs4,QN, B4,QN
 
@@ -825,9 +845,80 @@ rdvt_melody=*
 
 	db	B4,EN, Ds4,EN, Fs4,EN, Cs4,EN, B4,QN, A4,QN
 	db	E3,QN, Fs3,SN,E3,SN, Fs3,EN, E3,HN
+
+	db	INAUD,WN
+	db	INAUD,HN, INAUD,EN, E4,SN,Ds4,SN, B4,EN, INAUD,EN
+
+	db	INAUD,WN
+	db	INAUD,HN, INAUD,EN, E3,SN,Gs3,SN, E3,EN, B4,EN
+
+	db	INAUD,WN
+	db	INAUD,HN, INAUD,EN, Fs3,SN,Gs3,SN, B4,EN, Fs4,EN
+	db	INAUD,WN
+	db	INAUD,HN, INAUD,EN, B4,SN,Cs4,SN,E4,SN,Ds4,SN, B4,EN
+
+	;; Repeat of initial tranposed up (TODO: smarter)
+	db	SND_CMD_TRANSPOSE, 12
+	db	E3,EN, Fs3,SN,Gs3,SN, B3,EN, Ds3,SN,Fs3,SN, B3,EN,Ds3,EN, E3,QN
+	db	B4,QN, E4,QN, Cs4,QN, B4,QN
+
+	db	Fs3,EN, A4,EN, Cs4,EN, B4,EN, Cs4,QN, Fs3,QN
+	db	E3,QN, Ds3,QN, E3,HN
+
+	db	E3,EN, Fs3,SN,Gs3,SN, B4,EN, Cs4,SN,Ds4,SN, B4,EN,Cs4,EN, Ds4,QN
+	db	Gs3,QN, B4,QN, Cs4,QN, Ds4,QN
+
+	db	B4,EN, Ds4,EN, Fs4,EN, Cs4,EN, B4,QN, A4,QN
+	db	E3,QN, Fs3,SN,E3,SN, Fs3,EN, E3,HN
+	db	SND_CMD_TRANSPOSE, 0
+
 	db	SND_CMD_REPEAT
 
 rdvt_harmony=*
+	db	INAUD+12,WN
+	db	INAUD+12,WN
+	db	INAUD+12,WN
+	db	INAUD+12,WN
+
+	db	E3,HN, E3,EN,Gs3,EN, B4,QN
+	db	B4,EN,Ds4,EN, Fs4,EN,Ds4,EN, B4,HN
+
+	db	Fs3,HN, Fs3,EN,A4,EN, Cs4,QN
+	db	E3,EN, Gs3,SN,E3,SN, Gs3,EN, B4,EN, E3,HN
+
+	db	E3,HN, E3,EN,Gs3,EN, B4,QN
+	db	Gs3,EN,B4,EN, Ds4,EN,B4,EN, Gs3,HN
+
+	db	B4,HN, B4,EN,Ds4,EN, Fs4,QN
+	db	E3,QN, Gs3,SN,E3,SN, Gs3,EN, E3,HN
+
+	;;; REPLICATES PREVIOUS (TODO: w/ command/chaining)
+	db	E3,HN, E3,EN,Gs3,EN, B4,QN
+	db	B4,EN,Ds4,EN, Fs4,EN,Ds4,EN, B4,HN
+
+	db	Fs3,HN, Fs3,EN,A4,EN, Cs4,QN
+	db	E3,EN, Gs3,SN,E3,SN, Gs3,EN, B4,EN, E3,HN
+
+	db	E3,HN, E3,EN,Gs3,EN, B4,QN
+	db	Gs3,EN,B4,EN, Ds4,EN,B4,EN, Gs3,HN
+
+	db	B4,HN, B4,EN,Ds4,EN, Fs4,QN
+	db	E3,QN, Gs3,SN,E3,SN, Gs3,EN, E3,HN
+
+	;; TODO: modify, it's leading now
+	db	E3,HN, E3,EN, Fs3,SN,Gs3,SN, B4,EN,Cs4,EN
+	db	B4,EN, Ds4,SN,E4,SN, Fs4,EN,Ds4,EN, Fs4,HN
+
+	db	Fs3,HN, Fs3,SN,Gs3,SN, A4,SN,B4,SN, Cs4,QN
+	db	E3,EN, Gs3,SN,E3,SN, Gs3,EN, B4,EN, E3,HN
+
+	db	E3,HN, E3,EN, Fs3,SN,Gs3,SN, B4,EN,Ds4,EN
+	db	Gs3,EN, Gs3,SN,B4,SN, Ds4,EN,B4,EN, Gs3,HN
+
+	db	B4,HN, Cs4,SN,B4,SN,Ds4,SN,Cs4,SN, Fs4,QN
+	db	E3,QN, Gs3,SN,E3,SN, Gs3,EN, E3,HN
+
+	;;; Back to accompanyment (todo: etc)
 	db	E3,HN, E3,EN,Gs3,EN, B4,QN
 	db	B4,EN,Ds4,EN, Fs4,EN,Ds4,EN, B4,HN
 
@@ -860,6 +951,9 @@ horn=*
 horn_env=*
 	db	4, 8, 15, 14, 8, -1
 	db	5, 2, 0, -1
+horn_env_loud=*
+	db	15, 15, 15, 15, 14, 10, 12, 10, 12, 10, 12, 10, -1
+	db	14, 12, 4, 2, -1
 pitch1=*
 	db	4, 1, 3, 0, 2, -1, 8, 0, 1, -1, 0, 0
 
@@ -880,7 +974,7 @@ perc_env_hard=*
 	db	10, 8, 4, 2, 1, 2, 1, -1, 0, 1, 0, -1
 
 perc_env_long=*
-	db	15, 15, 15, 15, 14, 10, 12, 10, 12, 10, 8, 6, 4, 2, 1, 2, 1, -1, 0, 1, 0, -1
+	db	15, 15, 15, 15, 15, 15, 15, 15, 14, 13, 12, 10, 12, 10, 12, 10, 8, 6, 4, 2, 1, 2, 1, -1, 0, 1, 0, -1
 
 percussion_test_chain=*
 	db	0, QN, 1, QN, 2, QN, 3, QN, 4, QN, 5, QN, 6, QN, 7, QN

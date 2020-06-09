@@ -125,6 +125,7 @@ Eb8	equ	90
 E8	equ	91
 F8	equ	92
 Gb8	equ	93
+INAUD	equ	Gb8	; inaudible on square channels at least?
 
 ;; Note duration (notes play until -1, so all values are 2^x-1)
 WN	equ	127	; whole note
@@ -146,9 +147,11 @@ SND_CMD_MAJ		equ	(SND_CMD_FLAG|2)	; load built-in major arpreggio to pitch ptr
 SND_CMD_MIN		equ	(SND_CMD_FLAG|3)	; load built-in minor arpreggio to pitch ptr
 SND_CMD_DIM		equ	(SND_CMD_FLAG|4)	; load built-in diminished arpreggio to pitch ptr
 SND_CMD_DECAY_OFF	equ	(SND_CMD_FLAG|5)	; alter instrument decay offset
+SND_CMD_ENV_PTR		equ	(SND_CMD_FLAG|6)	; set new env ptr (little-endian)
+SND_CMD_TRANSPOSE	equ	(SND_CMD_FLAG|7)	; set new transpose delta
 
 ;; Built-in arpreggio pitch runs
-SND_ARP_WAIT=4
+SND_ARP_WAIT=3
 snd_arp_maj=*
 	db	SND_ARP_WAIT, 0, SND_ARP_WAIT, 4, SND_ARP_WAIT, 7, -1
 snd_arp_min=*
@@ -405,11 +408,27 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 .not_dim_\1		cmp	#SND_CMD_DECAY_OFF	
 			bne	.not_decay_off_\1
 			iny	
-			lda	(snd_chain_ptrs + 2 * \1), y ; set low byte of new ptr
+			lda	(snd_chain_ptrs + 2 * \1), y ; get new decay offset
 			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_decay_off
 			iny
 			jmp	.next_frame_\1	
-.not_decay_off_\1	beq	.hang_\1	; hang on rollover for now
+.not_decay_off_\1	cmp	#SND_CMD_ENV_PTR	
+			bne	.not_env_ptr_\1
+			iny
+			lda	(snd_chain_ptrs + 2 * \1), y ; set low byte of new ptr
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr
+			iny
+			lda	(snd_chain_ptrs + 2 * \1), y ; set high byte of new ptr
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_env_ptr + 1
+			iny
+			jmp	.next_frame_\1
+.not_env_ptr_\1		cmp	#SND_CMD_TRANSPOSE	
+.not_transpose_\1	bne	.not_transpose_\1	; hang on unrecognized cmd
+			iny	
+			lda	(snd_chain_ptrs + 2 * \1), y ; set new transpose delta
+			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
+			iny
+			jmp	.next_frame_\1
 			ENDM
 
 			;; Advance the specified channel to the next frame
