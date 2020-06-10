@@ -200,11 +200,17 @@ SND_DATA_START=*
 
 ;; Engine-level values
 snd_theme	ds	2	; ptr to current playing theme
+snd_chain_list_ptrs=*
+snd_chain_list_ptr_sq1	ds	2	; current chain list for first square wave channel
+snd_chain_list_ptr_sq2	ds	2	; current chain list for second square wave channel
+snd_chain_list_ptr_tri	ds	2	; current chain list for triangle wave channel
+snd_chain_list_ptr_noi	ds	2	; current chain list for noise channel
+SND_CHAIN_LIST_PTRS_SIZE=*-snd_chain_list_ptrs
 snd_chain_ptrs=*
-snd_theme_sq1	ds	2	; ptr to current chain for first square wave channel
-snd_theme_sq2	ds	2	; ptr to current chain for second square wave channel
-snd_theme_tri	ds	2	; ptr to current chain for triangle wave channel
-snd_theme_noi	ds	2	; ptr to current chain for noise channel
+snd_chain_ptr_sq1	ds	2	; current chain for first square wave channel
+snd_chain_ptr_sq2	ds	2	; current chain for second square wave channel
+snd_chain_ptr_tri	ds	2	; current chain for triangle wave channel
+snd_chain_ptr_noi	ds	2	; current chain for noise channel
 SND_CHAIN_PTRS_SIZE=*-snd_chain_ptrs
 snd_theme_acc	ds	1	; sound-subsystem-global aux accumulator
 snd_theme_tmp	ds	1	; sound-subsystem-global tmp variable
@@ -224,6 +230,14 @@ snd_chain_sq2	ds	SND_CHAIN_SIZE
 snd_chain_tri	ds	SND_CHAIN_SIZE
 snd_chain_noi	ds	SND_CHAIN_SIZE
 SND_CHAINS_END=*
+
+;; Per-channel 
+snd_chain_lists=*
+snd_chain_list_sql	ds	SND_CHAIN_LIST_SIZE
+snd_chain_list_sq2	ds	SND_CHAIN_LIST_SIZE
+snd_chain_list_tri	ds	SND_CHAIN_LIST_SIZE
+snd_chain_list_noi	ds	SND_CHAIN_LIST_SIZE
+SND_CHAIN_LISTS_END=*
 
 SND_DATA_SIZE=*-SND_DATA_START
 
@@ -245,3 +259,8 @@ snd_chain_note		ds	1	; base to add pitch modulation (includes transpose)
 snd_chain_pitch_idx	ds	1	; offset in pitch modulation sequence, if any
 snd_chain_pitch_wait	ds	1	; time to wait for next pitch change
 SND_CHAIN_SIZE=*
+
+*=0
+snd_chain_list_idx	ds	1	; index into current chain list
+snd_chain_list_count	ds	1	; number of times to repeat current chain
+SND_CHAIN_LIST_SIZE=*

@@ -141,7 +141,7 @@ YN	equ	0	; thirty-second note
 
 ; Commands (mutually exclusive with notes, indicated by high bit
 SND_CMD_FLAG		equ	%10000000
-SND_CMD_REPEAT		equ	(SND_CMD_FLAG|0)	; return to beginning of chain
+SND_CMD_END_CHAIN	equ	(SND_CMD_FLAG|0)	; end this chain, load next if/a
 SND_CMD_PITCH_PTR	equ	(SND_CMD_FLAG|1)	; load next two values as (little-endian) pitch ptr
 SND_CMD_MAJ		equ	(SND_CMD_FLAG|2)	; load built-in major arpreggio to pitch ptr
 SND_CMD_MIN		equ	(SND_CMD_FLAG|3)	; load built-in minor arpreggio to pitch ptr
@@ -367,11 +367,15 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 .done_\1		rts
 
 			;; Handle a command
-.do_command_\1		cmp	#SND_CMD_REPEAT
-			bne	.not_repeat_\1
-			ldy	#0		; repeat => just reset index and loop
+.do_command_\1		cmp	#SND_CMD_END_CHAIN
+			bne	.not_end_chain_\1
+			;;; Count down the repetitions for this chain
+			dec	snd_chain_lists + SND_CHAIN_LIST_SIZE * \1 + snd_chain_list_count
+			bne	.just_repeat_\1 ; if we haven't reached 0, just repeat
+			jsr	snd_chain_list_advance_\1 ; otherwise, advance
+.just_repeat_\1		ldy	#0	
 			jmp	.next_frame_\1
-.not_repeat_\1		cmp	#SND_CMD_PITCH_PTR
+.not_end_chain_\1	cmp	#SND_CMD_PITCH_PTR
 			bne	.not_pitch_ptr_\1	; hang on unrecognized commands
 			iny
 			lda	(snd_chain_ptrs + 2 * \1), y ; set low byte of new ptr
@@ -380,7 +384,7 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			lda	(snd_chain_ptrs + 2 * \1), y ; set high byte of new ptr
 			sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_pitch_ptr + 1
 			iny
-			bne	.next_frame_\1
+			jmp	.next_frame_\1
 .not_pitch_ptr_\1	cmp	#SND_CMD_MAJ
 			bne	.not_maj_\1
 			lda	#snd_arp_maj & $ff
@@ -437,6 +441,41 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			SND_CHAIN_ADVANCE 2		
 			SND_CHAIN_ADVANCE 3
 
+
+SND_CHAIN_LIST_ADVANCE		MACRO
+snd_chain_list_advance_\1	ldy	snd_chain_lists + SND_CHAIN_LIST_SIZE * \1 + snd_chain_list_idx
+				lda	(snd_chain_list_ptrs + 2 * \1), y ; get # of repeats
+				beq	.end_chain_list_\1 	; 0 => END
+				bpl	.no_loop_\1 		; (-1) => LOOP
+				
+				;; On loop, reset the list index and read first value
+				ldy	#0
+				sty	snd_chain_lists + SND_CHAIN_LIST_SIZE * \1 + snd_chain_list_idx
+				lda	(snd_chain_list_ptrs + 2 * \1), y
+
+				;; Store the repeat count
+.no_loop_\1			sta	snd_chain_lists + SND_CHAIN_LIST_SIZE * \1 + snd_chain_list_count
+				iny
+				lda	(snd_chain_list_ptrs + 2 * \1), y ; get transpose delta
+				sta	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
+				iny
+				lda	(snd_chain_list_ptrs + 2 * \1), y ; low byte of chain
+				sta	snd_chain_ptrs + 2 * \1
+				iny
+				lda	(snd_chain_list_ptrs + 2 * \1), y ; high byte of chain
+				sta	snd_chain_ptrs + 2 * \1 + 1
+
+				;; Save the advanced index
+				iny
+				sty	snd_chain_lists + SND_CHAIN_LIST_SIZE * \1 + snd_chain_list_idx
+.end_chain_list_\1		rts
+				ENDM
+
+				SND_CHAIN_LIST_ADVANCE 0
+				SND_CHAIN_LIST_ADVANCE 1
+				SND_CHAIN_LIST_ADVANCE 2
+				SND_CHAIN_LIST_ADVANCE 3
+
 ; Load a theme and prepare the engine to play it
 			code
 snd_start_theme 	lda	#snd_instr_noi & $ff
@@ -478,16 +517,16 @@ snd_start_theme 	lda	#snd_instr_noi & $ff
 			;; Reset the channel vars
 .instr_done 		iny			; y was -1, so is now 0
 			tya
-			ldy	#SND_CHAIN_SIZE * 4 - 1
+			ldy	#(SND_CHAIN_SIZE + SND_CHAIN_LIST_SIZE) * 4 - 1
 .clear_channel		sta	snd_chains, y	; clear channel
 			dey
 			bpl	.clear_channel
 
-			;; Set the chain ptrs
-			ldy	#8		; right after the instr ptrs
-			ldx	#SND_CHAIN_PTRS_SIZE
+			;; Set the chain list ptrs
+			ldy	#8		; ie, after the instr ptrs in the theme def
+			ldx	#SND_CHAIN_LIST_PTRS_SIZE
 .set_chain_ptrs		lda	(snd_theme), y
-			sta	snd_chain_ptrs - 8, y 
+			sta	snd_chain_list_ptrs - 8, y 
 			iny
 			dex
 			bne	.set_chain_ptrs
@@ -496,6 +535,11 @@ snd_start_theme 	lda	#snd_instr_noi & $ff
 			sta	snd_theme_acc	; finally, 0 out   <- clears scratch
 			sta	snd_theme_tmp   ; the global vars
 
+			;; Set the initial chain ptrs
+			jsr	snd_chain_list_advance_0
+			jsr	snd_chain_list_advance_1
+			jsr	snd_chain_list_advance_2
+			jsr	snd_chain_list_advance_3
 			rts
 
 			;; Handle NULL instruments by 0ing out the settings
