@@ -1,3 +1,7 @@
+dev
+doc/journal
+Session.vim
+
 # Ignore tup's cache.
 .tup/**
 
@@ -17,6 +21,7 @@
 *.swp
 *.tbl
 *.tbl.s
+*.dmc.s
 
 # Exception: handmade bins for testing util output.
 !test/lib/expected_*.bin

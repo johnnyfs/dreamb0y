@@ -10,8 +10,33 @@
 
 include lib/zero.s
 
+ALIGN64	MACRO
+	IF	* & 63 != 0
+		ds	64 - (* & 63)
+	ENDC
+	ENDM
+
 ;; prg-rom bank 1
+	code
 *=$c000
+
+;;;;;;;;;;;;;;;;;;;;;
+;;; AUDIO SAMPLES ;;;
+;;;;;;;;;;;;;;;;;;;;;
+
+; TODO: since these are auto-aligned, they can live anywhere
+ALIGN64
+dmc_cowbell3=*
+include	res/cowbell3.dmc.s
+ALIGN64
+dmc_hiblock=*
+include	res/hiblock.dmc.s
+ALIGN64
+dmc_lowblock=*
+include	res/lowblock.dmc.s
+ALIGN64
+dmc_sticks=*
+include	res/sticks.dmc.s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; INTERRUPT HANDLERS ;;;
@@ -168,16 +193,17 @@ reset	sei
 .zsound	sta	$4000, y
 	dey
 	bpl	.zsound
-	lda	#%00001111
-	sta	$4015
-	;lda	#%00111111
-	;sta	$4000
-	;lda	#0
-	;sta	$4001
-	;lda	#$ab
-	;sta	$4002
-	;lda	#$01
-	;sta	$4003
+
+.replay		ldx	#4
+		ldy	#0
+.next_sample	jsr	test_sample
+.wait_sample	lda	$4015
+		bpl	.wait_sample
+		dex
+		bne	.next_sample
+		beq	.replay
+
+.stall_test	jmp	.stall_test
 
 	;; turn the screen back on.
 	lda	#%10101000	; vblank enabled; 8x16 sprites
@@ -298,7 +324,30 @@ nmi	pha
         pla
         tax
         pla
-irq	rti		    ;; so 12 this path also + 6 for rti
+	rti
+
+	code
+test_sample	lda	#%00001111
+		sta	$4015
+
+		lda	samples, y
+		sta	$4010
+		lda	#63
+		sta	$4011
+		iny
+		lda	samples, y
+		sta	$4012	; $C000 + A * 64 => address
+		iny
+		lda	samples, y
+		sta	$4013	; sample length
+		iny
+
+		lda	#%00011111
+		sta	$4015
+		rts		    ;; so 12 this path also + 6 for rti
+
+	code
+irq		rti
 ;; }}}
 
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -786,6 +835,48 @@ status_bar=*
 include res/status_bar_indeces.tbl.s
 ;; }}}
 
+;; Sample Descriptions {{{
+samples=*
+;SND_SAMPLE_DECL	bells, 15, 142
+;SND_SAMPLE_DECL	bottle, 15, 228
+;SND_SAMPLE_DECL	clap1, 15, 64
+;SND_SAMPLE_DECL	clap2, 15, 81 
+;SND_SAMPLE_DECL	clap3, 15, 64
+;SND_SAMPLE_DECL	cowbell1, 15, 21
+;SND_SAMPLE_DECL	cowbell2, 15, 21
+;SND_SAMPLE_DECL	cowbell3, 15, 93
+;SND_SAMPLE_DECL	cowbell4, 15, 246
+;SND_SAMPLE_DECL	hiblock, 15, 56
+;SND_SAMPLE_DECL	lowblock, 15, 123
+;SND_SAMPLE_DECL	mute_tri, 15, 113
+;SND_SAMPLE_DECL	open_tri, 15, 220
+;SND_SAMPLE_DECL	steel_bell, 10, 236
+;SND_SAMPLE_DECL	sticks, 14, 214
+;SND_SAMPLE_DECL	tubular_c5, 8, 255
+
+SND_SAMPLE_DECL	sticks, 11, 19
+SND_SAMPLE_DECL	hiblock, 11, 24
+SND_SAMPLE_DECL	lowblock, 4, 12
+SND_SAMPLE_DECL	cowbell3, 12, 25
+
+;sample_bells=*
+;	db	%00001111
+;	db	((dmc_bells - $C000) / 64)
+;	db	142
+;
+;sample_bottle=*
+;	db	%00001111
+;	db	((dmc_bottle - $C000) / 64)
+;	db	228
+;
+;sample_clap1=*
+;	db	%00001111
+;	db	((dmc_clap1 - $C000) / 64)
+;	db	64
+
+	
+;; }}}
+
 ;; Music themes {{{
 
 inaud_measure=*
@@ -860,9 +951,9 @@ rdvt_harmony=*
 	dw	rdvt_horn_harmony
 	db	-1
 rdvt_bass=*
-	db	2, 0
+	db	2, 12
 	dw	rdvt_bass_intro
-	db	1, 0	
+	db	1, 12
 	dw	rdvt_bass_body
 	db	-1
 rdvt_percussion=*

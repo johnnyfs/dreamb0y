@@ -19,8 +19,17 @@ WIDGETS_SPRITES=widgets_sprites.chr.s
 PLAYER_SPRITES=dreamboy_realworld_day_sprites.chr.s
 SPRITES=$(WIDGETS_SPRITES) $(PLAYER_SPRITES)
 
+# Samples
+SAMPLES=$(wildcard *.dmc)
+SAMPLES_ASM=$(patsubst %.dmc, %.dmc.s, $(SAMPLES))
+
 .PHONY: all
-all: $(INDECES_RLE_ASM) $(ATTRIBS_ASM) $(OBSOUT_CUT_ASM) $(UNIQUES_CHR_ASM) $(STATUS_INDECES) $(SPRITES)
+all: $(INDECES_RLE_ASM) $(ATTRIBS_ASM) $(OBSOUT_CUT_ASM) $(UNIQUES_CHR_ASM) $(STATUS_INDECES) $(SPRITES) $(SAMPLES_ASM)
+
+.PHONY: tell
+tell:
+	echo $(SAMPLES)
+	echo $(SAMPLES_ASM)
 
 ########
 # Maps #
@@ -109,6 +118,17 @@ status_bar_indeces.tbl: status_bar_uniques.bmp
 
 status_bar_uniques.bmp: status_bar.png status_bar_palette.png grayscale.png
 	uniques status_bar.png -o status_bar_uniques.bmp -p status_bar_palette.png -C 1 -P grayscale.png -t status_bar_indeces.tbl -U 18 -W 9 
+
+###########
+# Samples #
+###########
+
+%.dmc.s: %.dmc
+	echo $(SAMPLES)
+	echo $(SAMPLES_ASM)
+	echo $<
+	echo $@
+	bin2asm $< -o $@
 
 ###########
 # Sprites #

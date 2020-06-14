@@ -12,6 +12,16 @@ ENDC
 SND_CH_REGS=$4000 ;; PPU channel registers start at $4000
 SND_REGS_PER_CH=4 ;; 4 registers per channel
 
+;; Declare a described sample in the form "name", rate index, and length in 16-byte chunks
+;; Creates a reference to the description in the form `sample_NAME`
+;; Expects the existence of sample data in the form `dmc_NAME`
+SND_SAMPLE_DECL	MACRO
+sample_\1=*
+	db	\2
+	db	(dmc_\1 - $C000) / 64
+	db	\3
+	ENDM
+
 PN=	%00010000 	; periodic noise mode flag
 ENV2=	%00100000	; noise env swap flag
 
