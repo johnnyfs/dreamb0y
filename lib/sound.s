@@ -3,6 +3,8 @@
 ;;; sound effects as needed.
 ;;;
 
+REST=0
+
 ; We need to force this, b/c the assembler won't assume 1-byte for zero page
 _SND_INSTR_SIZE=7
 IF SND_INSTR_SIZE != _SND_INSTR_SIZE
@@ -255,19 +257,27 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 
 			;; Count back duration to (-1)
 			dec	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait
-			bpl	.env_maybe_\1
+			bmi	.advance_\1
+			lda	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
+			bne	.env_maybe_\1	; note > 0 => apply effects
+			beq	.done_\1	; note=0   => REST, do nothing
 
 			;; Advance the index into the channel
-			ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
+.advance_\1		ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
 
 			;; High bid set => process command; otherwise => play note
 .next_frame_\1		lda	(snd_chain_ptrs + 2 * \1), y
 			bmi	.do_command_\1
+			bne	.not_rest_\1 ; 0 => REST
+			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
+			beq	.duration_\1 ; set the rest duration
 
 			;; Start the note
 			IF \1 < 3	; noise channel period is copied straight
 				;; Add transposition no matter what
-				clc
+.not_rest_\1			clc
 				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
 
 				;; Run pitch modulation (unless ptr is null)
@@ -276,6 +286,7 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 
 				;; On null ptr just set the note exactly once
 				asl
+				sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note ; save the note regardless, as 0 => rest
 				tax
 				lda	snd_pitches, x	; load low byte of pitch
 				sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
@@ -296,6 +307,7 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 				jsr	snd_pitch_advance_\1 ; clobbers Y, sets A = note index
 				ldy	snd_theme_tmp	; restore chain index
 			ELSE
+.not_rest_\1			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note ; save the note regardless, as 0 => rest
 				tax	; X = raw period for noise
 			ENDC
 
@@ -335,7 +347,7 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			ENDC
 
 			;; Set the duration
-			iny
+.duration_\1		iny
 			beq	.hang_\1
 			lda	(snd_chain_ptrs + 2 * \1), y
 			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_wait

@@ -194,16 +194,20 @@ reset	sei
 	dey
 	bpl	.zsound
 
-.replay		ldx	#4
-		ldy	#0
-.next_sample	jsr	test_sample
-.wait_sample	lda	$4015
-		bpl	.wait_sample
-		dex
-		bne	.next_sample
-		beq	.replay
+	;; Turn sound back on
+	lda	#%00001111
+	sta	$4015
 
-.stall_test	jmp	.stall_test
+;.replay		ldx	#4
+;		ldy	#0
+;.next_sample	jsr	test_sample
+;.wait_sample	lda	$4015
+;		bpl	.wait_sample
+;		dex
+;		bne	.next_sample
+;		beq	.replay
+;
+;.stall_test	jmp	.stall_test
 
 	;; turn the screen back on.
 	lda	#%10101000	; vblank enabled; 8x16 sprites
@@ -347,7 +351,7 @@ test_sample	lda	#%00001111
 		rts		    ;; so 12 this path also + 6 for rti
 
 	code
-irq		rti
+irq	rti
 ;; }}}
 
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -844,17 +848,13 @@ samples=*
 ;SND_SAMPLE_DECL	clap3, 15, 64
 ;SND_SAMPLE_DECL	cowbell1, 15, 21
 ;SND_SAMPLE_DECL	cowbell2, 15, 21
-;SND_SAMPLE_DECL	cowbell3, 15, 93
 ;SND_SAMPLE_DECL	cowbell4, 15, 246
-;SND_SAMPLE_DECL	hiblock, 15, 56
-;SND_SAMPLE_DECL	lowblock, 15, 123
 ;SND_SAMPLE_DECL	mute_tri, 15, 113
 ;SND_SAMPLE_DECL	open_tri, 15, 220
 ;SND_SAMPLE_DECL	steel_bell, 10, 236
-;SND_SAMPLE_DECL	sticks, 14, 214
 ;SND_SAMPLE_DECL	tubular_c5, 8, 255
 
-SND_SAMPLE_DECL	sticks, 11, 19
+SND_SAMPLE_DECL	sticks, 11, 23
 SND_SAMPLE_DECL	hiblock, 11, 24
 SND_SAMPLE_DECL	lowblock, 4, 12
 SND_SAMPLE_DECL	cowbell3, 12, 25
@@ -880,7 +880,7 @@ SND_SAMPLE_DECL	cowbell3, 12, 25
 ;; Music themes {{{
 
 inaud_measure=*
-	db	INAUD, WN, SND_CMD_END_CHAIN
+	db	REST, WN, SND_CMD_END_CHAIN
 
 flute=*
 	db	%10110000 ; duty 12.5, software volume (TODO: 0 volume)
@@ -977,16 +977,16 @@ rdvt_flute_melody=*
 	db	SND_CMD_END_CHAIN
 
 rdvt_flute_interlude=*
-	db	INAUD,WN
-	db	INAUD,HN, INAUD,EN, E4,SN,Ds4,SN, B4,EN, INAUD,EN
+	db	REST,WN
+	db	REST,HN, REST,EN, E4,SN,Ds4,SN, B4,EN, REST,EN
 
-	db	INAUD,WN
-	db	INAUD,HN, INAUD,EN, E3,SN,Gs3,SN, E3,EN, B4,EN
+	db	REST,WN
+	db	REST,HN, REST,EN, E3,SN,Gs3,SN, E3,EN, B4,EN
 
-	db	INAUD,WN
-	db	INAUD,HN, INAUD,EN, Fs3,SN,Gs3,SN, B4,EN, Fs4,EN
-	db	INAUD,WN
-	db	INAUD,HN, INAUD,EN, B4,SN,Cs4,SN,E4,SN,Ds4,SN, B4,EN
+	db	REST,WN
+	db	REST,HN, REST,EN, Fs3,SN,Gs3,SN, B4,EN, Fs4,EN
+	db	REST,WN
+	db	REST,HN, REST,EN, B4,SN,Cs4,SN,E4,SN,Ds4,SN, B4,EN
 
 	db	SND_CMD_END_CHAIN
 
