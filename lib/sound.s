@@ -4,6 +4,7 @@
 ;;;
 
 REST=0
+SSS=3  ; sound sample size -- necessary since we can't easily X3
 
 ; We need to force this, b/c the assembler won't assume 1-byte for zero page
 _SND_INSTR_SIZE=7
@@ -26,9 +27,12 @@ sample_\1=*
 
 PN=	%00010000 	; periodic noise mode flag
 ENV2=	%00100000	; noise env swap flag
+DMC=	%01000000	; noise play sample flag
+
+SND_SAMPLE_IDX_MASK=	%00111111	; mask off all but the sample index
 
 	;; Note pitch indeces
-A1	equ	0
+;A1	equ	0 ; Rest overrides; TODO: we can hack it back in
 Bb1	equ	1
 B1	equ	2
 C1	equ	3
@@ -265,17 +269,17 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			;; Advance the index into the channel
 .advance_\1		ldy	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_idx
 
-			;; High bid set => process command; otherwise => play note
+			;; 0 => rest; High bit => command; otherwise => play note
 .next_frame_\1		lda	(snd_chain_ptrs + 2 * \1), y
 			bmi	.do_command_\1
 			bne	.not_rest_\1 ; 0 => REST
-			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note
-			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2
+.do_rest_\1		sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note ; 0 => rest
+			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 2 ; zero out freq
 			sta	SND_CH_REGS + \1 * SND_REGS_PER_CH + 3
 			beq	.duration_\1 ; set the rest duration
 
 			;; Start the note
-			IF \1 < 3	; noise channel period is copied straight
+			IF \1 < 3	;; sq1/2, tri => transpose, look up, maybe pitch mod
 				;; Add transposition no matter what
 .not_rest_\1			clc
 				adc	snd_instrs + SND_INSTR_SIZE * \1 + snd_instr_transpose
@@ -306,9 +310,16 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 				sty	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_pitch_wait
 				jsr	snd_pitch_advance_\1 ; clobbers Y, sets A = note index
 				ldy	snd_theme_tmp	; restore chain index
-			ELSE
+			ELSE	;; Noise channel => set period directly, honoring flags
 .not_rest_\1			sta	snd_chains + SND_CHAIN_SIZE * \1 + snd_chain_note ; save the note regardless, as 0 => rest
 				tax	; X = raw period for noise
+				and	#DMC	; if set, then play sample instead of noise
+				beq	.skip_pitch_mod_\1
+				txa
+				and	#SND_SAMPLE_IDX_MASK
+				jsr	snd_play_sample
+				lda	#0
+				beq	.do_rest_\1 ; playing a sample => rest noise
 			ENDC
 
 			;; Set the duty/volume register
@@ -328,14 +339,14 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 					beq	.adv_env1_\1
 					jsr	snd_env2_advance_\1
 					ldy	snd_theme_tmp
-					bne	.note_lookup_\1
+					bne	.set_noise_period_\1
 				ENDC
 .adv_env1_\1			jsr	snd_env1_advance_\1
 				ldy	snd_theme_tmp ; restore y
 			ENDC
 
 			IF \1 == 3 ; sq1/2 + triangle: look up the note value
-.note_lookup_\1			txa
+.set_noise_period_\1		txa
 				and	#PN
 				beq	.no_pmode_\1
 				txa
@@ -463,7 +474,6 @@ snd_chain_advance_\1	lda	snd_chain_ptrs + 2 * \1 + 1
 			SND_CHAIN_ADVANCE 2		
 			SND_CHAIN_ADVANCE 3
 
-
 SND_CHAIN_LIST_ADVANCE		MACRO
 snd_chain_list_advance_\1	ldy	snd_chain_lists + SND_CHAIN_LIST_SIZE * \1 + snd_chain_list_idx
 				lda	(snd_chain_list_ptrs + 2 * \1), y ; get # of repeats
@@ -544,8 +554,8 @@ snd_start_theme 	lda	#snd_instr_noi & $ff
 			dey
 			bpl	.clear_channel
 
-			;; Set the chain list ptrs
-			ldy	#8		; ie, after the instr ptrs in the theme def
+			;; Set the chain list ptrs + sample table ptr
+			ldy	#8		; ie, after the ptrs in the theme def
 			ldx	#SND_CHAIN_LIST_PTRS_SIZE
 .set_chain_ptrs		lda	(snd_theme), y
 			sta	snd_chain_list_ptrs - 8, y 
@@ -553,6 +563,14 @@ snd_start_theme 	lda	#snd_instr_noi & $ff
 			dex
 			bne	.set_chain_ptrs
 
+			;; Copy the sample ptr (could hack onto end of prev?)
+			lda	(snd_theme), y	; y = end of chains, start of sample ptr
+			sta	snd_theme_samples
+			iny
+			lda	(snd_theme), y
+			sta	snd_theme_samples + 1
+
+			;; Clear the theme-global vars
 			txa			; x must be 0 here
 			sta	snd_theme_acc	; finally, 0 out   <- clears scratch
 			sta	snd_theme_tmp   ; the global vars
@@ -590,10 +608,37 @@ snd_pitches	dw	$07f1, $0780, $0713, $06ad, $064d, $05f3
 		dw	$001f, $001d, $001b, $001a, $0018, $0017
 		dw	$0015, $0014, $0013, $0012, $0011, $0010
 
+;; Start the sample indexed by A (expects A to be already multiplied by SSS, the
+;; snd sample size).
+		code
+snd_play_sample	sty	snd_theme_tmp
+		tay
+
+		lda	#%00001111	; halt any currently playing sample
+		sta	$4015
+
+		;; TODO: use zp pointer once we're sure this works
+		lda	samples, y	; first byte = rate (| 0'ed out flags)
+		sta	$4010
+		lda	#63		; XXX: do all samples start midrange?
+		sta	$4011
+		iny
+		lda	samples, y	; second byte = address encoded
+		sta	$4012		; $C000 + A * 64 => address
+		iny
+		lda	samples, y	; third byte = sample length encoded
+		sta	$4013		; length/16
+		iny
+
+		lda	#%00011111	; restart the sample channel
+		sta	$4015
+
+		ldy	snd_theme_tmp
+		rts
+
 			code
 snd_advance		jsr	snd_chain_advance_0
 			jsr	snd_chain_advance_1
 			jsr	snd_chain_advance_2
 			jsr	snd_chain_advance_3
 			rts
-

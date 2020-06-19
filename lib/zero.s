@@ -199,7 +199,8 @@ DIR_NW=7
 SND_DATA_START=*
 
 ;; Engine-level values
-snd_theme	ds	2	; ptr to current playing theme
+snd_theme		ds	2	; ptr to current playing theme
+snd_theme_samples	ds	2	; ptr to theme's sample tbl (needs to follow chains)
 snd_chain_list_ptrs=*
 snd_chain_list_ptr_sq1	ds	2	; current chain list for first square wave channel
 snd_chain_list_ptr_sq2	ds	2	; current chain list for second square wave channel

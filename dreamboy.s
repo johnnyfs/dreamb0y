@@ -929,6 +929,7 @@ perc_env_long=*
 realworld_day_village_theme=*
 	dw	flute, horn, bass, percussion
 	dw	rdvt_melody, rdvt_harmony, rdvt_bass, rdvt_percussion
+	dw	samples
 
 rdvt_melody=*
 	db	12, 0
@@ -1039,7 +1040,7 @@ rdvt_bass_body=*
 	db	SND_CMD_END_CHAIN
 
 rdvt_percussion_main=*
-	db	1,EN, 4,EN, 8,EN, ENV2|4,EN, 1,EN, 4,EN, 8,EN, ENV2|PN|1,EN 
+	db	1,EN, 4,EN, 8,EN, DMC|0,EN, 1,EN, DMC|3,EN, DMC|6,EN, DMC|9,EN 
 
 	db	SND_CMD_END_CHAIN
 
