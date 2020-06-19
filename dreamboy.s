@@ -1040,7 +1040,11 @@ rdvt_bass_body=*
 	db	SND_CMD_END_CHAIN
 
 rdvt_percussion_main=*
-	db	1,EN, 4,EN, 8,EN, DMC|0,EN, 1,EN, DMC|3,EN, DMC|6,EN, DMC|9,EN 
+	db	1,EN, 4,EN, 1,EN, DMC|3,EN, 1,EN, 4,EN, 1,EN, DMC|3,EN
+	db	1,EN, 4,SN,4,SN, 1,EN, 4,SN,4,SN, 1,EN, 4,EN, DMC|3,EN, DMC|6,EN
+	db	1,EN, 4,EN, 1,EN, DMC|3,EN, 1,EN, 4,EN, 1,EN, DMC|3,EN
+	db	1,EN, 4,SN,4,SN, 1,EN, 4,SN,4,SN, 1,EN, 4,EN, DMC|3,SN,DMC|6,SN, DMC|9,EN
+	;db	1,EN, 4,EN, 8,EN, DMC|0,EN, 1,EN-1, DMC|3,EN, DMC|6,EN, DMC|9,EN+1
 
 	db	SND_CMD_END_CHAIN
 
