@@ -26,17 +26,25 @@ ALIGN64	MACRO
 
 ; TODO: since these are auto-aligned, they can live anywhere
 ALIGN64
-dmc_cowbell3=*
-include	res/cowbell3.dmc.s
-ALIGN64
-dmc_hiblock=*
-include	res/hiblock.dmc.s
-ALIGN64
-dmc_lowblock=*
-include	res/lowblock.dmc.s
-ALIGN64
-dmc_sticks=*
-include	res/sticks.dmc.s
+;dmc_cowbell3=*
+;include	res/cowbell3.dmc.s
+;ALIGN64
+;dmc_hiblock=*
+;include	res/hiblock.dmc.s
+;ALIGN64
+;dmc_lowblock=*
+;include	res/lowblock.dmc.s
+;ALIGN64
+;dmc_sticks=*
+;include	res/sticks.dmc.s
+dmc_lowblock4=*
+include	res/lowblock4.dmc.s
+dmc_lowblock6=*
+include	res/lowblock6.dmc.s
+dmc_lowblock8=*
+include	res/lowblock8.dmc.s
+dmc_lowblock15=*
+include	res/lowblock15.dmc.s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; INTERRUPT HANDLERS ;;;
@@ -198,17 +206,6 @@ reset	sei
 	lda	#%00001111
 	sta	$4015
 
-;.replay		ldx	#4
-;		ldy	#0
-;.next_sample	jsr	test_sample
-;.wait_sample	lda	$4015
-;		bpl	.wait_sample
-;		dex
-;		bne	.next_sample
-;		beq	.replay
-;
-;.stall_test	jmp	.stall_test
-
 	;; turn the screen back on.
 	lda	#%10101000	; vblank enabled; 8x16 sprites
 	sta	$2000
@@ -329,26 +326,6 @@ nmi	pha
         tax
         pla
 	rti
-
-	code
-test_sample	lda	#%00001111
-		sta	$4015
-
-		lda	samples, y
-		sta	$4010
-		lda	#63
-		sta	$4011
-		iny
-		lda	samples, y
-		sta	$4012	; $C000 + A * 64 => address
-		iny
-		lda	samples, y
-		sta	$4013	; sample length
-		iny
-
-		lda	#%00011111
-		sta	$4015
-		rts		    ;; so 12 this path also + 6 for rti
 
 	code
 irq	rti
@@ -838,45 +815,7 @@ include res/realworld_day_obs_3_3.tbl.s
 status_bar=*
 include res/status_bar_indeces.tbl.s
 ;; }}}
-
-;; Sample Descriptions {{{
-samples=*
-;SND_SAMPLE_DECL	bells, 15, 142
-;SND_SAMPLE_DECL	bottle, 15, 228
-;SND_SAMPLE_DECL	clap1, 15, 64
-;SND_SAMPLE_DECL	clap2, 15, 81 
-;SND_SAMPLE_DECL	clap3, 15, 64
-;SND_SAMPLE_DECL	cowbell1, 15, 21
-;SND_SAMPLE_DECL	cowbell2, 15, 21
-;SND_SAMPLE_DECL	cowbell4, 15, 246
-;SND_SAMPLE_DECL	mute_tri, 15, 113
-;SND_SAMPLE_DECL	open_tri, 15, 220
-;SND_SAMPLE_DECL	steel_bell, 10, 236
-;SND_SAMPLE_DECL	tubular_c5, 8, 255
-
-SND_SAMPLE_DECL	sticks, 11, 23
-SND_SAMPLE_DECL	hiblock, 11, 24
-SND_SAMPLE_DECL	lowblock, 4, 12
-SND_SAMPLE_DECL	cowbell3, 12, 25
-
-;sample_bells=*
-;	db	%00001111
-;	db	((dmc_bells - $C000) / 64)
-;	db	142
-;
-;sample_bottle=*
-;	db	%00001111
-;	db	((dmc_bottle - $C000) / 64)
-;	db	228
-;
-;sample_clap1=*
-;	db	%00001111
-;	db	((dmc_clap1 - $C000) / 64)
-;	db	64
-
 	
-;; }}}
-
 ;; Music themes {{{
 
 inaud_measure=*
@@ -918,48 +857,56 @@ percussion=*
 	db	%00110000
 	db	15
 	db	0	  ; ignored, should be set to 0
+	dw	perc_env_norm
 	dw	perc_env_hard
-	dw	perc_env_long
-perc_env_hard=*
-	db	10, 8, 4, 2, 1, 2, 1, -1, 0, 1, 0, -1
+perc_env_norm=*
+	db	12, 10, 6, 4, 2, 1, 2, 0, -1, 0, -1
 
-perc_env_long=*
-	db	15, 15, 15, 15, 15, 15, 15, 15, 14, 13, 12, 10, 12, 10, 12, 10, 8, 6, 4, 2, 1, 2, 1, -1, 0, 1, 0, -1
+perc_env_hard=*
+	db	15, 14, 12, 6, 4, 1, 2, 1, 2, 0, -1, 0, -1
 
 realworld_day_village_theme=*
 	dw	flute, horn, bass, percussion
 	dw	rdvt_melody, rdvt_harmony, rdvt_bass, rdvt_percussion
-	dw	samples
+	dw	NULL
 
 rdvt_melody=*
 	db	12, 0
-	dw	inaud_measure
+	dw	inaud_measure		; 12 measures
 	db	1, 0
-	dw	rdvt_flute_melody
+	dw	rdvt_flute_melody	; 8
 	db	1, 0
-	dw	rdvt_flute_interlude
+	dw	rdvt_flute_interlude	; 8
 	db	1, 12
-	dw	rdvt_flute_melody
+	dw	rdvt_flute_melody	; 8
 	db	-1
 rdvt_harmony=*
 	db	4, 0
-	dw	inaud_measure
+	dw	inaud_measure		; 4
 	db	2, -12
-	dw	rdvt_horn_harmony
+	dw	rdvt_horn_harmony	; 16
 	db	1, -12
-	dw	rdvt_horn_lead
+	dw	rdvt_horn_lead		; 8
 	db	1, -12 
-	dw	rdvt_horn_harmony
+	dw	rdvt_horn_harmony	; 8
 	db	-1
 rdvt_bass=*
 	db	2, 12
-	dw	rdvt_bass_intro
-	db	1, 12
-	dw	rdvt_bass_body
+	dw	rdvt_bass_intro		; 4*2= 8
+	db	7, 12
+	dw	rdvt_bass_body		; 4*7= 28
 	db	-1
 rdvt_percussion=*
 	db	1, 0
-	dw	rdvt_percussion_main
+	dw	rdvt_percussion_intro	; 4
+	db	8, 0
+	dw	rdvt_percussion_tap	; 1*16=16
+	db	2, 0
+	dw	rdvt_percussion_main	; 2*4=8
+	db	8, 0
+	dw	rdvt_percussion_throb	; 1*8=8
+	db	2, 0
+	dw	rdvt_percussion_main	; 2*4=8
 	db	-1
 
 rdvt_flute_melody=*
@@ -1039,13 +986,27 @@ rdvt_bass_body=*
 
 	db	SND_CMD_END_CHAIN
 
-rdvt_percussion_main=*
-	db	1,EN, 4,EN, 1,EN, DMC|3,EN, 1,EN, 4,EN, 1,EN, DMC|3,EN
-	db	1,EN, 4,SN,4,SN, 1,EN, 4,SN,4,SN, 1,EN, 4,EN, DMC|3,EN, DMC|6,EN
-	db	1,EN, 4,EN, 1,EN, DMC|3,EN, 1,EN, 4,EN, 1,EN, DMC|3,EN
-	db	1,EN, 4,SN,4,SN, 1,EN, 4,SN,4,SN, 1,EN, 4,EN, DMC|3,SN,DMC|6,SN, DMC|9,EN
-	;db	1,EN, 4,EN, 8,EN, DMC|0,EN, 1,EN-1, DMC|3,EN, DMC|6,EN, DMC|9,EN+1
+rdvt_percussion_intro=*
+	db	1,EN, 4,SN,4,SN, 1,EN, 4,SN,4,SN, 8,EN, 4,EN, 1,SN,1,SN, ENV2|4,EN
+	db	1,EN, 4,EN, 8,EN, 1,EN, 1,EN, 1,EN, 1,EN, ENV2|8,EN
+	db	1,EN, 4,SN,4,SN, 1,EN, 4,SN,4,SN, 1,EN, 4,EN, ENV2|1,SN,ENV2|1,SN, ENV2|1,EN
+	db	1,EN, 4,EN, 8,EN, 1,EN, 1,EN, 1,EN, ENV2|8,EN, 8,EN
+	db	SND_CMD_END_CHAIN
 
+rdvt_percussion_tap=*
+	db	1,EN, 4,EN, 1,EN, 4,EN, 1,EN, 4,EN, 1,EN, 8,EN
+	db	SND_CMD_END_CHAIN
+
+rdvt_percussion_main=*
+	db	1,EN, 1,SN,1,SN, ENV2|4,EN, 1,SN,1,SN, ENV2|1,EN, ENV2|1,EN, ENV2|4,QN 
+	db	1,EN, 1,SN,1,SN, ENV2|4,EN, 1,SN,1,SN, ENV2|8,QN, ENV2|8,QN
+	db	1,EN, 1,SN,1,SN, ENV2|4,EN, 1,SN,1,SN, ENV2|1,EN, ENV2|1,EN, ENV2|4,QN 
+	db	1,EN, 1,SN,1,SN, ENV2|4,EN, 1,SN,1,SN, ENV2|1,HN
+
+	db	SND_CMD_END_CHAIN
+
+rdvt_percussion_throb=*
+	db	1,EN, ENV2|4,EN, 1,EN, ENV2|8,EN, 1,EN, ENV2|4,EN, 1,EN, ENV2|8,EN
 	db	SND_CMD_END_CHAIN
 
 ;; }}}

@@ -618,15 +618,15 @@ snd_play_sample	sty	snd_theme_tmp
 		sta	$4015
 
 		;; TODO: use zp pointer once we're sure this works
-		lda	samples, y	; first byte = rate (| 0'ed out flags)
+		lda	(snd_theme_samples), y	; first byte = rate (| 0'ed out flags)
 		sta	$4010
-		lda	#63		; XXX: do all samples start midrange?
+		lda	#0		; XXX: do all samples start midrange?
 		sta	$4011
 		iny
-		lda	samples, y	; second byte = address encoded
+		lda	(snd_theme_samples), y	; second byte = address encoded
 		sta	$4012		; $C000 + A * 64 => address
 		iny
-		lda	samples, y	; third byte = sample length encoded
+		lda	(snd_theme_samples), y	; third byte = sample length encoded
 		sta	$4013		; length/16
 		iny
 
