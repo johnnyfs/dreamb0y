@@ -20,32 +20,6 @@ ALIGN64	MACRO
 	code
 *=$c000
 
-;;;;;;;;;;;;;;;;;;;;;
-;;; AUDIO SAMPLES ;;;
-;;;;;;;;;;;;;;;;;;;;;
-
-; TODO: since these are auto-aligned, they can live anywhere
-ALIGN64
-;dmc_cowbell3=*
-;include	res/cowbell3.dmc.s
-;ALIGN64
-;dmc_hiblock=*
-;include	res/hiblock.dmc.s
-;ALIGN64
-;dmc_lowblock=*
-;include	res/lowblock.dmc.s
-;ALIGN64
-;dmc_sticks=*
-;include	res/sticks.dmc.s
-dmc_lowblock4=*
-include	res/lowblock4.dmc.s
-dmc_lowblock6=*
-include	res/lowblock6.dmc.s
-dmc_lowblock8=*
-include	res/lowblock8.dmc.s
-dmc_lowblock15=*
-include	res/lowblock15.dmc.s
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; INTERRUPT HANDLERS ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
